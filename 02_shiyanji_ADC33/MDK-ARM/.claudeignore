@@ -1,0 +1,27 @@
+# Compiled output
+*.o
+*.crf
+*.d
+*.axf
+*.hex
+*.bin
+*.elf
+*.map
+*.lst
+*.htm
+*.dep
+*.lnp
+*.sct
+*.dbgconf
+
+# Generated config
+DebugConfig/
+RTE/
+*.uvprojx
+*.uvoptx
+*.uvguix
+
+# IDE / 工程文件
+.vscode/**
+*.ioc
+*.mxproject

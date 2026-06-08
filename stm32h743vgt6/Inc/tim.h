@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2023 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -55,7 +55,9 @@ extern TIM_HandleTypeDef htim16;
 extern TIM_HandleTypeDef htim17;
 
 /* USER CODE BEGIN Private defines */
-
+extern volatile unsigned long FreeRTOSRunTimeTicks;
+void configureTimerForRunTimeStats(void);
+unsigned long getRunTimeCounterValue(void);
 /* USER CODE END Private defines */
 
 void MX_TIM1_Init(void);

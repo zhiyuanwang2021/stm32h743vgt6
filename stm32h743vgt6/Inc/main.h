@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2023 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -31,7 +31,8 @@ extern "C" {
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdbool.h"
+#include "stdint.h"
 /* USER CODE END Includes */
 
 /* Exported types ------------------------------------------------------------*/
@@ -167,7 +168,7 @@ void Error_Handler(void);
 #define P_DI11_GPIO_Port GPIOE
 
 /* USER CODE BEGIN Private defines */
-
+extern uint16_t tim6us;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

@@ -1,0 +1,2449 @@
+#include "communicate.h"
+#include "gParameter.h"
+#include "posGenerator.h"
+#include "Servo_driver.h"
+#include "usart.h"
+#include <string.h>
+#include "freertos.h"
+#include "ADS1274.h"
+#include "DI.h"
+#include "DO.h"
+#include "in_out.h"
+#include <elog.h>
+
+//#define CurrentData_debug
+
+#define FLOAT_TYPE 0
+#define UINT32_TYPE 1
+#define UINT16_TYPE 2
+#define UINT8_TYPE 3
+
+
+void LINK_ACK_Process(void);
+void DOPE_OPEN_CLOSE_LINK_Process(void);
+void DOPEON_OFF_Process(void);
+void DOPESETCTRL_Process(void);
+void DOPETRANSMITDATA_Process(void);
+void DOPEDEFAULTACC_Process(void);
+void DOPERDNOMINALACCSPEED_Process(void);
+void DOPESETNOMINALACCSPEED_Process(void);
+void DOPESETDATATRANSMISSIONRATE_Process(void);
+void DOPERDCTRLPARAMETER_Process(void);
+void DOPEDEADBANDCTRL_Process(void);
+void DOPESPEEDLIMIT_Process(void);
+void DOPEINTGR_Process(void);
+void DOPEDESTWND_Process(void);
+void DOPESFT_Process(void);
+void DOPEPOSPID_Process(void);
+void DOPERDPOSPID_Process(void);
+void DOPEWRPOSPID_Process(void);
+void DOPESPEEDPID_Process(void);
+void DOPERDSPEEDPID_Process(void);
+void DOPEWRSPEEDPID_Process(void);
+void DOPEFEEDFORWARD_Process(void);
+void DOPERDFEEDFORWARD_Process(void);
+void DOPEWRFEEDFORWARD_Process(void);
+void SETTARE_Process(void);
+void DOPESETSENSORCORRECTION_Process(void);
+
+void DOPEMOVE_Process(void);
+void DOPEMOVE_A_Process(void);
+void DOPEPOS_Process(void);
+void DOPEPOS_A_Process(void);
+void DOPEHALT_Process(void);
+void DOPEPOSEXT_Process(void);
+void DOPECYCLE_Process(void);
+void DOPEDYNCYCLE_Process(void);
+void RDOUTPUTPARA_Process(void);//读取输出参数
+void WROUTPUTPARA_Process(OUTPUTPARA *x);//写入输出参数
+void RDETHPARA_Process(void);//读以太网参数
+void WRETHPARA_Process(void);//下发以太网参数
+void RDSYSPARA_Process(void);//读系统参数
+void WRSYSPARA_Process(void);//下发系统参数
+void DOPESETOPENLOOPCOMMAND_Process(void);//手动测试指令
+
+//传感器相关通信处理函数
+void RDSENSORDATA_Process(void);//读取传感器数据
+void WRSENSORDATA_Process(void);//写入传感器数据
+void RDSENSORBIGDEFORMATIONDATA_Process(void);//读取大变形传感器数据
+void WRSENSORBIGDEFORMATIONDATA_Process(void);//写入大变形传感器数据
+//void SENSORZEROSET_Process(void);
+//void SETSENSORCALIBRATION_Process(void);
+//void WRITESENSORPARS_Process(void);
+
+void Variable_Type_Conversion(uint8_t type,uint32_t x,uint8_t* buf,uint16_t* bufnum);
+
+uint8 buf_com[500]={0};
+void ETH_Communicate_Process(void)
+{
+	//接收数据包处理
+	while(rev_fifo.state != FIFO_EMPTY)
+	{
+	rev_ring_fifo_pop(buf_data_save);//接收队列pop一条数据帧
+		
+			if(buf_data_save[0] == 0xAA && buf_data_save[1] == 0xAA) //再次确认帧头 并 防止队列空和错误帧情况
+			{ 
+					switch(buf_data_save[2])//功能码
+					{
+						case LINK_ACK://对0xA0功能码应答，用于判断网络状态*
+								LINK_ACK_Process();
+							break;
+						case DOPE_OPEN_CLOSE_LINK://建立或断开连接 数据长度 00 01  数据内容 01   //01 On   00 Off 
+								DOPE_OPEN_CLOSE_LINK_Process();
+							break;
+						case DOPEON_OFF://激活/停用控制器 数据长度 00 01  数据内容 01   //01 On   00 Off 
+								DOPEON_OFF_Process();
+							break;
+						case DOPESETCTRL://使能/不使能闭环控制 数据长度 00 01  数据内容 01   //01 On   00 Off 
+								DOPESETCTRL_Process();
+							break; 
+						case DOPETRANSMITDATA://激活/停用测量数据传输
+								DOPETRANSMITDATA_Process();
+							break;
+						case DOPERDNOMINALACCSPEED://0x07 读取位置生成器标称值******
+								DOPERDNOMINALACCSPEED_Process();
+						break;
+						case DOPESETNOMINALACCSPEED://0x08 读取位置生成器标称值******
+								DOPESETNOMINALACCSPEED_Process();
+						break;
+						case DOPERDCTRLPARAMETER://读取所有闭环控制参数***
+								DOPERDCTRLPARAMETER_Process();
+							break;
+						case DOPEDEADBANDCTRL://设定误差死区控制参数*
+								DOPEDEADBANDCTRL_Process();
+							break;
+						case DOPEDEFAULTACC://设定默认加速度*
+								DOPEDEFAULTACC_Process();
+							break;
+						case DOPESPEEDLIMIT://设定最大限定速度*
+								DOPESPEEDLIMIT_Process();
+							break;
+						case DOPESETDATATRANSMISSIONRATE://设定数据发送周期
+								DOPESETDATATRANSMISSIONRATE_Process();
+							break;
+						case DOPEINTGR://设定传感器滤波时间*
+								DOPEINTGR_Process();
+							break;
+						case DOPEDESTWND://设定目标误差/时间窗口*
+								DOPEDESTWND_Process();
+							break;
+						case DOPESFT://设定软限位*
+								DOPESFT_Process();
+							break;
+						case DOPEPOSPID://0x11  设置位置闭环控制参数****** 
+								DOPEPOSPID_Process();
+							break;
+						case DOPERDPOSPID://读取位置闭环控制参数*
+								DOPERDPOSPID_Process();
+							break;
+						case DOPEWRPOSPID://写入位置闭环控制参数*
+								DOPEWRPOSPID_Process();
+							break;
+						case DOPESPEEDPID://0x14  设置速度闭环控制参数****** 
+								DOPESPEEDPID_Process();
+						break;
+						case DOPERDSPEEDPID://0x15  读取速度闭环控制参数****** 
+								DOPERDSPEEDPID_Process();
+						break;
+						case DOPEWRSPEEDPID://0x16  写入速度闭环控制参数****** 
+								DOPEWRSPEEDPID_Process();
+						break;
+						case DOPEFEEDFORWARD://0x17 设置速度前馈参数****** 
+								DOPEFEEDFORWARD_Process();
+						break;
+						case DOPERDFEEDFORWARD://读取速度前馈参数*
+								DOPERDFEEDFORWARD_Process(); 
+							break;
+						case DOPEWRFEEDFORWARD://写入速度前馈参数*
+								DOPEWRFEEDFORWARD_Process();
+							break;
+						case DOPESETSENSORCORRECTION://设定传感器校正表指令
+								//DOPESETSENSORCORRECTION_Process();
+							break;
+						case RDOUTPUTPARA://读取输出参数
+								RDOUTPUTPARA_Process();
+							break;
+						case WROUTPUTPARA://写入输出参数
+								WROUTPUTPARA_Process(&OutputPara_combuf);
+							break;
+						case RDETHPARA://读以太网参数*
+								RDETHPARA_Process();
+							break;
+						case WRETHPARA://下发以太网参数	下位机收到后重启*
+								WRETHPARA_Process();
+							break;				
+						case RDSYSPARA://读系统参数
+								RDSYSPARA_Process();
+							break;
+						case WRSYSPARA://下发系统参数
+								WRSYSPARA_Process();
+							break;				
+						case DOPEWRDVERSION://读版本信息
+							break;
+						case SETTARE://测量通道数值清零
+							SETTARE_Process();
+							break;
+						case DOPESETOPENLOOPCOMMAND://开环测试指令
+							DOPESETOPENLOOPCOMMAND_Process();
+							break;				
+						case DOPEMOVE://以默认加速度上下移动
+							DOPEMOVE_Process();
+							break;
+						case DOPEMOVE_A://以指定加速度上下移动
+							DOPEMOVE_A_Process();
+							break;				
+						case DOPEPOS://以默认加速度移动至指定位置 0x23
+							DOPEPOS_Process();
+							break;
+						case DOPEPOS_A://以指定加/减速度移动至指定位置 0x24
+							DOPEPOS_A_Process();
+							break;
+						case DOPEPOSEXT:
+						/*在指定的控制模式下，以默认加速度移动至指定位置，若达到限位位置，则以默认减速度停止；
+						若即将达到指定位置，则根据参数“DestinationMode”确定到达指定位置的控制方式以及到达指定位置后的操作*/
+							DOPEPOSEXT_Process();
+						break;
+						case DOPEPOSEXT_A:
+						/*同DoPEPosExt，但在加减速过程中，需要指定加速度，限位减速度，靠近目标位置后的减速度*/
+						break;
+						case DOPEHALT://以默认减速度从现Command速度减速至0
+							DOPEHALT_Process();
+						break;
+						case DOPEHALT_A://以指定减速度从现Command速度减速至0
+						break;
+						case DOPECYCLE://用斜坡函数执行周期运动
+							DOPECYCLE_Process();
+						break;
+						case DOPEDYNCYCLE://动态循环指令***
+							DOPEDYNCYCLE_Process();
+						break;
+						//传感器相关
+						case RDSENSORDATA://读取传感器数据
+							RDSENSORDATA_Process();
+						break;
+						case WRSENSORDATA://写入传感器数据
+							WRSENSORDATA_Process();
+						break;
+						case RDSENSORBIGDEFORMATIONDATA://读取传感器数据
+							RDSENSORBIGDEFORMATIONDATA_Process();
+						break;
+						case WRSENSORBIGDEFORMATIONDATA://写入传感器数据
+							WRSENSORBIGDEFORMATIONDATA_Process();
+						break;
+						default:
+						break;
+					
+					}
+			}
+			
+	memset(buf_data_save,0,sizeof(buf_data_save));
+	}
+}
+
+void LINK_ACK_Process(void)
+{
+	stateFlag.PC_ack_state = 1;//有ack信号，网络连接正常
+}
+
+void DOPE_OPEN_CLOSE_LINK_Process(void)
+{
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	if(buf_data_save[5] == Device_Open)
+	{commBuf.OpenDevice_state = Device_Open;	buf_com[0]=Device_Open;}
+	else
+	{commBuf.OpenDevice_state = Device_Off;	buf_com[0]=Device_Off;}
+	
+	//要加入任务通知检测 是否出于紧急状态 如果出于紧急状态 需要等待系统完成紧急处理后再回消息 11.11
+	send_ring_fifo_push(1,buf_com,0x80);//下位机会返回0x80功能码
+	memset(buf_com,0,sizeof(buf_com));
+}
+void DOPEON_OFF_Process(void)
+{
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	if(buf_data_save[5] == DoPE_On)
+	{commBuf.DoPE_state = DoPE_On;	buf_com[0]=DoPE_On;}
+	else
+	{commBuf.DoPE_state = DoPE_Off;	buf_com[0]=DoPE_Off;}
+	send_ring_fifo_push(1,buf_com,0x81);//下位机会返回0x81功能码
+	memset(buf_com,0,sizeof(buf_com));
+}
+
+void DOPESETCTRL_Process(void)
+{
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	if(buf_data_save[5] == CtrlTRUE)
+	{commBuf.DoPESetCtrl = CtrlTRUE;buf_com[0]=CtrlTRUE;}
+	else
+	{commBuf.DoPESetCtrl = CtrlFALSE;buf_com[0]=CtrlFALSE;}
+	InputTAN = (buf_data_save[6]<<8) +(buf_data_save[7]);//InputTAN 指令编号
+	send_ring_fifo_push(1,buf_com,0x82);//下位机会返回0x83功能码
+	memset(buf_com,0,sizeof(buf_com));
+}
+
+void DOPETRANSMITDATA_Process(void)
+{
+	if(buf_data_save[5] == CtrlTRUE)
+	{stateFlag.DoPETransmitData = TRUE;}
+	else
+	{stateFlag.DoPETransmitData = FALSE;}
+	InputTAN = (buf_data_save[10]<<8) +(buf_data_save[11]);//InputTAN 指令编号
+}
+/*
+DOPERDCTRLPARAMETER_Process 
+读取闭环控制参数指令,对应下位机返回指令0x87
+*/
+void DOPERDCTRLPARAMETER_Process_LoadingData(uint8_t movectrl)
+{
+	switch(movectrl)
+	{
+		case POS_MODE:
+			Posallctrlpara.PosPid.P = 1;
+			Posallctrlpara.PosPid.I = 1;
+			Posallctrlpara.PosPid.D = 1;
+			Posallctrlpara.SpeedPid.P = 1;
+			Posallctrlpara.SpeedPid.I = 1;
+			Posallctrlpara.SpeedPid.D = 1;
+			Posallctrlpara.Ffd.SpeedFFP = 1;
+			Posallctrlpara.Ffd.PosDelay = 1;
+			Posallctrlpara.DefaultAcc = 1;
+			Posallctrlpara.Speed = 1;
+			Posallctrlpara.Deviation = 1;
+			Posallctrlpara.DevReaction = 1;
+			Posallctrlpara.Wnd.WndSize = 1;
+			Posallctrlpara.Wnd.WndTime = 1;
+			Posallctrlpara.Sft.UpperSft = 1;
+			Posallctrlpara.Sft.LowerStf = 1;
+			Posallctrlpara.Sft.Reaction = 1;
+			Posallctrlpara.MinAcceleration = 1;
+			Posallctrlpara.MaxAcceleration = 1;
+			Posallctrlpara.MinDeceleration = 1;
+			Posallctrlpara.MaxDeceleration = 1;
+			Posallctrlpara.MinSpeed = 1;
+			Posallctrlpara.MaxSpeed = 1;
+			Posallctrlpara.Deadband.Deadband = 1;
+			Posallctrlpara.Deadband.PercentP = 1;
+			Posallctrlpara.Dither.DitherFrequency = 1;
+			Posallctrlpara.Dither.DitherAmplitude = 1;
+		break;
+		case LOAD_MODE:
+			Loadallctrlpara.PosPid.P = 2;
+			Loadallctrlpara.PosPid.I = 2;
+			Loadallctrlpara.PosPid.D = 2;
+			Loadallctrlpara.SpeedPid.P = 2;
+			Loadallctrlpara.SpeedPid.I = 2;
+			Loadallctrlpara.SpeedPid.D = 2;
+			Loadallctrlpara.Ffd.SpeedFFP = 2;
+			Loadallctrlpara.Ffd.PosDelay = 2;
+			Loadallctrlpara.DefaultAcc = 2;
+			Loadallctrlpara.Speed = 2;
+			Loadallctrlpara.Deviation = 2;
+			Loadallctrlpara.DevReaction = 2;
+			Loadallctrlpara.Wnd.WndSize = 2;
+			Loadallctrlpara.Wnd.WndTime = 2;
+			Loadallctrlpara.Sft.UpperSft = 2;
+			Loadallctrlpara.Sft.LowerStf = 2;
+			Loadallctrlpara.Sft.Reaction = 2;
+			Loadallctrlpara.MinAcceleration = 2;
+			Loadallctrlpara.MaxAcceleration = 2;
+			Loadallctrlpara.MinDeceleration = 2;
+			Loadallctrlpara.MaxDeceleration = 2;
+			Loadallctrlpara.MinSpeed = 2;
+			Loadallctrlpara.MaxSpeed = 2;
+			Loadallctrlpara.Deadband.Deadband = 2;
+			Loadallctrlpara.Deadband.PercentP = 2;
+			Loadallctrlpara.Dither.DitherFrequency = 2;
+			Loadallctrlpara.Dither.DitherAmplitude = 2;
+		break;
+		case EXTEN_MODE:
+			Extallctrlpara.PosPid.P = 3;
+			Extallctrlpara.PosPid.I = 3;
+			Extallctrlpara.PosPid.D = 3;
+			Extallctrlpara.SpeedPid.P = 3;
+			Extallctrlpara.SpeedPid.I = 3;
+			Extallctrlpara.SpeedPid.D = 3;
+			Extallctrlpara.Ffd.SpeedFFP = 3;
+			Extallctrlpara.Ffd.PosDelay = 3;
+			Extallctrlpara.DefaultAcc = 3;
+			Extallctrlpara.Speed = 3;
+			Extallctrlpara.Deviation = 3;
+			Extallctrlpara.DevReaction = 3;
+			Extallctrlpara.Wnd.WndSize = 3;
+			Extallctrlpara.Wnd.WndTime = 3;
+			Extallctrlpara.Sft.UpperSft = 3;
+			Extallctrlpara.Sft.LowerStf = 3;
+			Extallctrlpara.Sft.Reaction = 3;
+			Extallctrlpara.MinAcceleration = 3;
+			Extallctrlpara.MaxAcceleration = 3;
+			Extallctrlpara.MinDeceleration = 3;
+			Extallctrlpara.MaxDeceleration = 3;
+			Extallctrlpara.MinSpeed = 3;
+			Extallctrlpara.MaxSpeed = 3;
+			Extallctrlpara.Deadband.Deadband = 3;
+			Extallctrlpara.Deadband.PercentP = 3;
+			Extallctrlpara.Dither.DitherFrequency = 3;
+			Extallctrlpara.Dither.DitherAmplitude = 3;
+		break;
+		default:break;
+	}
+	
+}
+void DOPERDCTRLPARAMETER_Process_Conversion(ALLCTRLPARA x,uint16_t* i)
+{
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.PosPid.P),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.PosPid.I),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.PosPid.D),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.SpeedPid.P),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.SpeedPid.I),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.SpeedPid.D),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Ffd.SpeedFFP),buf_com,i);		
+	Variable_Type_Conversion(UINT32_TYPE,*(uint32_t*)(&x.Ffd.PosDelay),buf_com,i);		
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.DefaultAcc),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Speed),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Deviation),buf_com,i);
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&x.DevReaction),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Wnd.WndSize),buf_com,i);
+	Variable_Type_Conversion(UINT32_TYPE,*(uint32_t*)(&x.Wnd.WndTime),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Sft.UpperSft),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Sft.LowerStf),buf_com,i);
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&x.Sft.Reaction),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.MinAcceleration),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.MaxAcceleration),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.MinDeceleration),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.MaxDeceleration),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.MinSpeed),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.MaxSpeed),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Deadband.Deadband),buf_com,i);
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&x.Deadband.PercentP),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Dither.DitherFrequency),buf_com,i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&x.Dither.DitherAmplitude),buf_com,i);	
+}
+
+void DOPERDCTRLPARAMETER_Process(void)//读取闭环控制参数指令,对应下位机返回指令
+{
+	uint8_t movectrl=0;
+	uint16_t i=0;
+	movectrl = buf_data_save[5];
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&movectrl),buf_com,&i);
+	//DOPERDCTRLPARAMETER_Process_LoadingData(movectrl);//更新所有要上发的控制参数
+	switch(movectrl)
+	{
+		case POS_MODE:
+				DOPERDCTRLPARAMETER_Process_Conversion(Posallctrlpara,&i);			
+		break;
+		case LOAD_MODE: 
+				DOPERDCTRLPARAMETER_Process_Conversion(Loadallctrlpara,&i);
+		break;
+		case EXTEN_MODE:	
+				DOPERDCTRLPARAMETER_Process_Conversion(Extallctrlpara,&i);
+		break;
+		default:break;
+	}
+	send_ring_fifo_push(i,buf_com,0x84);//下位机会返回0x84功能码
+}
+
+/*
+DOPEDEADBANDCTRL_Process 
+设定误差死区控制参数指令处理函数
+*/
+void DOPEDEADBANDCTRL_Process(void)//设定误差死区控制参数指令处理函数
+{
+	uint8_t movectrl=0,temp1=0;
+	uint32_t temp=0;
+	movectrl = buf_data_save[5]; 
+	temp = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	temp1 = buf_data_save[10];
+	switch(movectrl)
+	{
+		case POS_MODE:	commBuf.Pos.Deadband.Deadband = *((float*)(&temp));
+					commBuf.Pos.Deadband.PercentP = temp1;
+		printf("Pos Deadband:%f PercentP:%d%%\r\n",commBuf.Pos.Deadband.Deadband,commBuf.Pos.Deadband.PercentP);
+		break;
+		case LOAD_MODE:	commBuf.Load.Deadband.Deadband = *((float*)(&temp));
+					commBuf.Load.Deadband.PercentP = temp1;
+		printf("Load Deadband:%f PercentP:%d%%\r\n",commBuf.Load.Deadband.Deadband,commBuf.Load.Deadband.PercentP);
+		break;
+		case EXTEN_MODE:	commBuf.Ext.Deadband.Deadband = *((float*)(&temp));
+					commBuf.Ext.Deadband.PercentP = temp1;
+		printf("Ext Deadband:%f PercentP:%d%%\r\n",commBuf.Ext.Deadband.Deadband,commBuf.Ext.Deadband.PercentP);
+		break;
+		default:break;
+	}
+}
+
+/*
+DOPEDEADBANDCTRL_Process 
+设置默认加速度
+同时减速度也会被设置成-Acc
+*/
+void DOPEDEFAULTACC_Process(void)//设置默认加速度
+{
+	uint8_t movectrl=0;
+	uint32_t temp=0;
+	movectrl = buf_data_save[5]; 
+	temp = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	switch(movectrl)
+	{
+		case POS_MODE:	commBuf.Pos.DefaultAcc = *((float*)(&temp));
+					commBuf.Pos.DefaultDec = -commBuf.Pos.DefaultAcc;
+					//leave it there for now ,and then change it to loopctrl
+					Posallctrlpara.DefaultAcc = commBuf.Pos.DefaultAcc;
+					mySemaphore.mram.write_defalutacc_pos = 1;
+		printf("Pos DefaultAcc:%f Dec:%f\r\n",commBuf.Pos.DefaultAcc,commBuf.Pos.DefaultDec);
+		break;
+		case LOAD_MODE:	commBuf.Load.DefaultAcc = *((float*)(&temp));
+					commBuf.Load.DefaultDec = -commBuf.Load.DefaultAcc;
+					//leave it there for now ,and then change it to loopctrl
+					Loadallctrlpara.DefaultAcc = commBuf.Load.DefaultAcc;
+					mySemaphore.mram.write_defalutacc_load = 1;
+		printf("Load DefaultAcc:%f Dec:%f\r\n",commBuf.Load.DefaultAcc,commBuf.Load.DefaultDec);
+		break;
+		case EXTEN_MODE:	commBuf.Ext.DefaultAcc = *((float*)(&temp));
+					commBuf.Ext.DefaultDec = -commBuf.Ext.DefaultAcc;
+					//leave it there for now ,and then change it to loopctrl
+					Extallctrlpara.DefaultAcc = commBuf.Ext.DefaultAcc;
+					mySemaphore.mram.write_defalutacc_ext = 1;
+		printf("Ext DefaultAcc:%f Dec:%f\r\n",commBuf.Ext.DefaultAcc,commBuf.Ext.DefaultDec);
+		break;
+		default:break;
+	}
+}
+
+void DOPESPEEDLIMIT_Process(void)//设置默认最大限定速度
+{
+	uint8_t movectrl=0;
+	uint32_t temp=0;
+	movectrl = buf_data_save[5]; 
+	temp = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	switch(movectrl)
+	{
+		case POS_MODE:	commBuf.Pos.DefaultSpeed = *((float*)(&temp));
+					//leave it there for now ,and then change it to loopctrl
+					Posallctrlpara.Speed = commBuf.Pos.DefaultSpeed;
+					mySemaphore.mram.write_speed_pos = 1;
+		printf("Pos DefaultSpeed:%f\r\n",commBuf.Pos.DefaultSpeed);
+		break;
+		case LOAD_MODE:	commBuf.Load.DefaultSpeed = *((float*)(&temp));
+					//leave it there for now ,and then change it to loopctrl
+					Loadallctrlpara.Speed = commBuf.Load.DefaultSpeed;
+					mySemaphore.mram.write_speed_load = 1;
+		printf("Load DefaultSpeed:%f\r\n",commBuf.Load.DefaultSpeed);
+		break;
+		case EXTEN_MODE:	commBuf.Ext.DefaultSpeed = *((float*)(&temp));
+					//leave it there for now ,and then change it to loopctrl
+					Extallctrlpara.Speed = commBuf.Ext.DefaultSpeed;
+					mySemaphore.mram.write_speed_ext = 1;
+		printf("Ext DefaultSpeed:%f\r\n",commBuf.Ext.DefaultSpeed);
+		break;
+		default:break;
+	}
+
+}
+
+void DOPESETDATATRANSMISSIONRATE_Process(void)//设定数据发送周期
+{
+	commBuf.SysPara.TransmitDataPeriod = (buf_data_save[5]<<24) + (buf_data_save[6]<<16) +(buf_data_save[7]<<8) +(buf_data_save[8]);
+	//leave it there for now ,and then change it to loopctrl
+	mySemaphore.comm.transperiodUpdate = 1;
+	InputTAN = (buf_data_save[9]<<8) +(buf_data_save[10]);//InputTAN 指令编号
+	printf("TransmitDataPeriod:%d\r\n",commBuf.SysPara.TransmitDataPeriod);
+}
+
+void DOPEINTGR_Process(void)//设定传感器滤波时间
+{
+	commBuf.sensorset.SensorNo = buf_data_save[5]; //传感器编号
+	commBuf.sensorset.Intgr = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);//积分时间
+	InputTAN = (buf_data_save[10]<<8) +(buf_data_save[11]);//InputTAN 指令编号
+	printf("SensorNo:%d,Intgr:%d\r\n",commBuf.sensorset.SensorNo,commBuf.sensorset.Intgr);
+}
+
+void DOPEDESTWND_Process(void)//设定目标误差/时间窗口
+{
+	uint8_t movectrl=0;
+	uint32_t temp1=0,temp2=0;
+	movectrl = buf_data_save[5]; 
+	temp1 = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	temp2 = (buf_data_save[10]<<24) + (buf_data_save[11]<<16) +(buf_data_save[12]<<8) +(buf_data_save[13]);
+	switch(movectrl)
+	{
+		case POS_MODE:	commBuf.Pos.Wnd.WndSize = *((float*)(&temp1));
+					commBuf.Pos.Wnd.WndTime = temp2;
+					//leave it there for now ,and then change it to loopctrl
+					Posallctrlpara.Wnd.WndSize = commBuf.Pos.Wnd.WndSize;
+					Posallctrlpara.Wnd.WndTime = commBuf.Pos.Wnd.WndTime;
+					mySemaphore.mram.write_wnd_pos = 1;
+					printf("Pos WndSize:%f,Time:%d\r\n",commBuf.Pos.Wnd.WndSize,commBuf.Pos.Wnd.WndTime);
+		break;
+		case LOAD_MODE:	commBuf.Load.Wnd.WndSize = *((float*)(&temp1));
+					commBuf.Load.Wnd.WndTime = temp2;
+					//leave it there for now ,and then change it to loopctrl
+					Loadallctrlpara.Wnd.WndSize = commBuf.Load.Wnd.WndSize;
+					Loadallctrlpara.Wnd.WndTime = commBuf.Load.Wnd.WndTime;
+					mySemaphore.mram.write_wnd_load = 1;
+					printf("Load WndSize:%f,Time:%d\r\n",commBuf.Load.Wnd.WndSize,commBuf.Load.Wnd.WndTime);
+		break;
+		case EXTEN_MODE:	commBuf.Ext.Wnd.WndSize = *((float*)(&temp1));
+					commBuf.Ext.Wnd.WndTime = temp2;
+					//leave it there for now ,and then change it to loopctrl
+					Extallctrlpara.Wnd.WndSize = commBuf.Ext.Wnd.WndSize;
+					Extallctrlpara.Wnd.WndTime = commBuf.Ext.Wnd.WndTime;
+					mySemaphore.mram.write_wnd_ext = 1;
+					printf("Ext WndSize:%f,Time:%d\r\n",commBuf.Ext.Wnd.WndSize,commBuf.Ext.Wnd.WndTime);
+		break;
+		default:break;
+	}
+
+}
+
+void DOPESFT_Process(void)//设定软限位
+{
+	uint8_t movectrl=0,reaction=0;
+	uint32_t temp1=0,temp2=0;
+	movectrl = buf_data_save[5]; 
+	temp1 = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	temp2 = (buf_data_save[10]<<24) + (buf_data_save[11]<<16) +(buf_data_save[12]<<8) +(buf_data_save[13]);
+	reaction = buf_data_save[14];
+	switch(movectrl)
+	{
+		case POS_MODE:	commBuf.Pos.Sft.UpperSft = *((float*)(&temp1));
+					commBuf.Pos.Sft.LowerStf = *((float*)(&temp2));
+					commBuf.Pos.Sft.Reaction = reaction;
+					//leave it there for now ,and then change it to loopctrl
+					Posallctrlpara.Sft.UpperSft = commBuf.Pos.Sft.UpperSft;
+					Posallctrlpara.Sft.LowerStf = commBuf.Pos.Sft.LowerStf;
+					Posallctrlpara.Sft.Reaction = commBuf.Pos.Sft.Reaction;
+					mySemaphore.mram.write_sft_pos = 1;
+		printf("Pos Stf Upper:%f,Lower:%f,Reaction:%d\r\n",commBuf.Pos.Sft.UpperSft,commBuf.Pos.Sft.LowerStf,commBuf.Pos.Sft.Reaction);
+		break;
+		case LOAD_MODE:	commBuf.Load.Sft.UpperSft = *((float*)(&temp1));
+					commBuf.Load.Sft.LowerStf = *((float*)(&temp2));
+					commBuf.Load.Sft.Reaction = reaction;
+					//leave it there for now ,and then change it to loopctrl
+					Loadallctrlpara.Sft.UpperSft = commBuf.Load.Sft.UpperSft;
+					Loadallctrlpara.Sft.LowerStf = commBuf.Load.Sft.LowerStf;
+					Loadallctrlpara.Sft.Reaction = commBuf.Load.Sft.Reaction;
+					mySemaphore.mram.write_sft_load = 1;
+		printf("Load Stf Upper:%f,Lower:%f,Reaction:%d\r\n",commBuf.Load.Sft.UpperSft,commBuf.Load.Sft.LowerStf,commBuf.Load.Sft.Reaction);
+		break;
+		case EXTEN_MODE:	commBuf.Ext.Sft.UpperSft = *((float*)(&temp1));
+					commBuf.Ext.Sft.LowerStf = *((float*)(&temp2));
+					commBuf.Ext.Sft.Reaction = reaction;
+					//leave it there for now ,and then change it to loopctrl
+					Extallctrlpara.Sft.UpperSft = commBuf.Ext.Sft.UpperSft;
+					Extallctrlpara.Sft.LowerStf = commBuf.Ext.Sft.LowerStf;
+					Extallctrlpara.Sft.Reaction = commBuf.Ext.Sft.Reaction;
+					mySemaphore.mram.write_sft_ext = 1;
+		printf("Ext Stf Upper:%f,Lower:%f,Reaction:%d\r\n",commBuf.Ext.Sft.UpperSft,commBuf.Ext.Sft.LowerStf,commBuf.Ext.Sft.Reaction);
+		break;
+		default:break;
+	}
+}
+
+void DOPERDPOSPID_Process(void)//读取位置闭环控制参数
+{
+	uint8_t movectrl=0,highpressure=0;
+	uint16_t i=0;
+	movectrl = buf_data_save[5];
+	highpressure = buf_data_save[6];
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&movectrl),buf_com,&i);
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&highpressure),buf_com,&i);
+	switch(movectrl)
+	{
+		case POS_MODE:	
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.PosPid.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.PosPid.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.PosPid.D),buf_com,&i);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.PosPid_Hp.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.PosPid_Hp.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.PosPid_Hp.D),buf_com,&i);
+					}
+		break;
+		case LOAD_MODE: 
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.PosPid.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.PosPid.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.PosPid.D),buf_com,&i);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.PosPid_Hp.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.PosPid_Hp.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.PosPid_Hp.D),buf_com,&i);
+					}
+		break;
+		case EXTEN_MODE:	
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.PosPid.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.PosPid.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.PosPid.D),buf_com,&i);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.PosPid_Hp.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.PosPid_Hp.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.PosPid_Hp.D),buf_com,&i);
+					}
+		break;
+		default:break;
+	}
+	send_ring_fifo_push(i,buf_com,0x85);//下位机会返回0x85功能码
+}
+
+void DOPEWRPOSPID_Process(void)//写入闭环控制参数
+{
+	uint32_t temp=0; 
+	uint16_t i=5;
+	uint8_t movectrl=0,highpressure=0;
+	float P,I,D;
+	commBuf.Command = DOPEWRPOSPID;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	movectrl = buf_data_save[i++];
+	highpressure = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	P = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	I = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	D = *((float*)(&temp));temp=0;
+	
+	switch(movectrl)
+	{
+		case POS_MODE:
+			if(highpressure == 0){
+			commBuf.Pos.Pid.P = P;
+			commBuf.Pos.Pid.I = I;
+			commBuf.Pos.Pid.D = D;
+			//leave it there for now ,and then change it to loopctrl
+			Posallctrlpara.PosPid.P = P;
+			Posallctrlpara.PosPid.I = I;
+			Posallctrlpara.PosPid.D = D;
+			mySemaphore.pid.pos = 1;
+			mySemaphore.mram.write_pospid_pos = 1;
+			}
+			else{
+			commBuf.Pos.Pid_Hp.P = P;
+			commBuf.Pos.Pid_Hp.I = I;
+			commBuf.Pos.Pid_Hp.D = D;
+			}
+			break;
+		case LOAD_MODE:
+			if(highpressure == 0){
+			commBuf.Load.Pid.P = P;
+			commBuf.Load.Pid.I = I;
+			commBuf.Load.Pid.D = D;
+			//leave it there for now ,and then change it to loopctrl
+			Loadallctrlpara.PosPid.P = P;
+			Loadallctrlpara.PosPid.I = I;
+			Loadallctrlpara.PosPid.D = D;
+			mySemaphore.pid.load = 1;
+			mySemaphore.mram.write_pospid_load = 1;
+			}
+			else{
+			commBuf.Load.Pid_Hp.P = P;
+			commBuf.Load.Pid_Hp.I = I;
+			commBuf.Load.Pid_Hp.D = D;
+			}
+			break;
+		case EXTEN_MODE:
+			if(highpressure == 0){
+			commBuf.Ext.Pid.P = P;
+			commBuf.Ext.Pid.P = I;
+			commBuf.Ext.Pid.P = D;
+			//leave it there for now ,and then change it to loopctrl
+			Extallctrlpara.PosPid.P = P;
+			Extallctrlpara.PosPid.P = I;
+			Extallctrlpara.PosPid.P = D;
+			mySemaphore.pid.ext = 1;
+			mySemaphore.mram.write_pospid_ext = 1;
+			}
+			else{
+			commBuf.Ext.Pid_Hp.P = P;
+			commBuf.Ext.Pid_Hp.P = I;
+			commBuf.Ext.Pid_Hp.P = D;
+			}
+			break;
+		default:break;
+	}
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E = 0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("Command=0x%2x DOPEWRPOSPID\t\r\n",commBuf.Command);
+	printf("MoveCtrl=%d\t\r\n",movectrl);
+	printf("Highpressure=%d\t\r\n",highpressure);
+	printf("P=%f\t\r\n",P);
+	printf("I=%f\t\r\n",I);
+	printf("D=%f\t\r\n",D);
+}
+
+void DOPERDFEEDFORWARD_Process(void)//读取速度前馈参数
+{
+	uint8_t movectrl=0,highpressure=0;
+	uint16_t i=0;
+	movectrl = buf_data_save[5];
+	highpressure = buf_data_save[6];
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&movectrl),buf_com,&i);
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&highpressure),buf_com,&i);
+	switch(movectrl)
+	{
+		case POS_MODE:	
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.Ffd.SpeedFFP),buf_com,&i);
+						Variable_Type_Conversion(UINT32_TYPE,*(uint32_t*)(&Posallctrlpara.Ffd.PosDelay),buf_com,&i);
+						printf("DOPERDFEEDFORWARD PosDelay:%d\r\n",Posallctrlpara.Ffd.PosDelay);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.Ffd_Hp.SpeedFFP),buf_com,&i);
+						Variable_Type_Conversion(UINT32_TYPE,*(uint32_t*)(&Posallctrlpara.Ffd_Hp.PosDelay),buf_com,&i);
+					}
+		break;
+		case LOAD_MODE: 
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.Ffd.SpeedFFP),buf_com,&i);
+						Variable_Type_Conversion(UINT32_TYPE,*(uint32_t*)(&Loadallctrlpara.Ffd.PosDelay),buf_com,&i);
+						printf("DOPERDFEEDFORWARD PosDelay:%d\r\n",Loadallctrlpara.Ffd.PosDelay);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.Ffd_Hp.SpeedFFP),buf_com,&i);
+						Variable_Type_Conversion(UINT32_TYPE,*(uint32_t*)(&Loadallctrlpara.Ffd_Hp.PosDelay),buf_com,&i);
+					}
+		break;
+		case EXTEN_MODE:	
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.Ffd.SpeedFFP),buf_com,&i);
+						Variable_Type_Conversion(UINT32_TYPE,*(uint32_t*)(&Extallctrlpara.Ffd.PosDelay),buf_com,&i);
+						printf("DOPERDFEEDFORWARD PosDelay:%d\r\n",Extallctrlpara.Ffd.PosDelay);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.Ffd_Hp.SpeedFFP),buf_com,&i);
+						Variable_Type_Conversion(UINT32_TYPE,*(uint32_t*)(&Extallctrlpara.Ffd_Hp.PosDelay),buf_com,&i);
+					}
+		break;
+		default:break;
+	}
+	send_ring_fifo_push(i,buf_com,0x87);//下位机会返回0x89功能码
+}
+
+void DOPEWRFEEDFORWARD_Process(void)//设定速度前馈参数
+{
+	uint8_t movectrl=0,highpressure=0;
+	uint32_t tempFFP=0,tempDelay=0;
+	movectrl = buf_data_save[5];
+	highpressure = buf_data_save[6];
+	tempFFP = (buf_data_save[7]<<24) + (buf_data_save[8]<<16) +(buf_data_save[9]<<8) +(buf_data_save[10]);
+	tempDelay = (buf_data_save[11]<<24) + (buf_data_save[12]<<16) +(buf_data_save[13]<<8) +(buf_data_save[14]);
+	switch(movectrl)
+	{
+		case POS_MODE:	commBuf.Pos.HighPressure = highpressure;
+					if(commBuf.Pos.HighPressure == 0)
+					{
+					commBuf.Pos.Ffd.SpeedFFP = *((float*)(&tempFFP));
+					commBuf.Pos.Ffd.PosDelay = tempDelay;
+					//leave it there for now ,and then change it to loopctrl
+					Posallctrlpara.Ffd.SpeedFFP = commBuf.Pos.Ffd.SpeedFFP;
+					Posallctrlpara.Ffd.PosDelay = commBuf.Pos.Ffd.PosDelay;
+					mySemaphore.mram.write_ffd_pos = 1;
+					}
+					else
+					{
+					commBuf.Pos.Ffd_Hp.SpeedFFP = *((float*)(&tempFFP));
+					commBuf.Pos.Ffd_Hp.PosDelay = tempDelay;
+					}
+		break;
+		case LOAD_MODE:  commBuf.Load.HighPressure = highpressure;
+					if(commBuf.Load.HighPressure == 0)
+					{
+					commBuf.Load.Ffd.SpeedFFP = *((float*)(&tempFFP));
+					commBuf.Load.Ffd.PosDelay = tempDelay;
+					//leave it there for now ,and then change it to loopctrl
+					Loadallctrlpara.Ffd.SpeedFFP = commBuf.Load.Ffd.SpeedFFP;
+					Loadallctrlpara.Ffd.PosDelay = commBuf.Load.Ffd.PosDelay;
+					mySemaphore.mram.write_ffd_load = 1;
+					}
+					else
+					{
+					commBuf.Load.Ffd_Hp.SpeedFFP = *((float*)(&tempFFP));
+					commBuf.Load.Ffd_Hp.PosDelay = tempDelay;
+					}
+		break;
+		case EXTEN_MODE:	commBuf.Ext.HighPressure = highpressure;
+					if(commBuf.Ext.HighPressure == 0)
+					{
+					commBuf.Ext.Ffd.SpeedFFP = *((float*)(&tempFFP));
+					commBuf.Ext.Ffd.PosDelay = tempDelay;
+					//leave it there for now ,and then change it to loopctrl
+					Extallctrlpara.Ffd.SpeedFFP = commBuf.Ext.Ffd.SpeedFFP;
+					Extallctrlpara.Ffd.PosDelay = commBuf.Ext.Ffd.PosDelay;
+					mySemaphore.mram.write_ffd_ext = 1;
+					}
+					else
+					{
+					commBuf.Ext.Ffd_Hp.SpeedFFP = *((float*)(&tempFFP));
+					commBuf.Ext.Ffd_Hp.PosDelay = tempDelay;
+					}
+		break;
+		default:break;
+	}
+
+	printf("Command: %2x movectrl:%d\r\n",commBuf.Command,movectrl);
+	printf("SpeedFFP = %f\r\n",*((float*)(&tempFFP)));
+	printf("PosDelay = %d\r\n",tempDelay);
+
+}
+
+void DOPESETSENSORCORRECTION_Process(void)//设定传感器校正表指令
+{
+	uint32_t temp=0;
+	uint16_t i=5,j=0;
+	commBuf.sensorset.Correct.CalculatedSensor = buf_data_save[i++]; 
+	commBuf.sensorset.Correct.SENSOR_CORR_MAX = buf_data_save[i++]; 
+	commBuf.sensorset.Correct.CorrNo = buf_data_save[i++]; 
+	for(j=0;j<commBuf.sensorset.Correct.CorrNo;j++)//存S1的校正值
+	{
+		temp += (buf_data_save[i++]<<24);
+		temp += (buf_data_save[i++]<<16);
+		temp += (buf_data_save[i++]<<8);
+		temp += (buf_data_save[i++]);
+		commBuf.sensorset.Correct.S1Correction[j] = *((float*)(&temp));
+		temp=0;
+	}
+	for(j=0;j<commBuf.sensorset.Correct.CorrNo;j++)//存S2的ADC码值
+	{
+		temp += (buf_data_save[i++]<<24);
+		temp += (buf_data_save[i++]<<16);
+		temp += (buf_data_save[i++]<<8);
+		temp += (buf_data_save[i++]);
+		commBuf.sensorset.Correct.S2Value[j] = temp;
+		temp=0;
+	}
+	
+	printf("CalculatedSensor=%d\r\n",commBuf.sensorset.Correct.CalculatedSensor);
+	printf("SENSOR_CORR_MAX=%d\r\n",commBuf.sensorset.Correct.SENSOR_CORR_MAX);
+	printf("CorrNo=%d\r\n",commBuf.sensorset.Correct.CorrNo);
+	for(j=0;j<commBuf.sensorset.Correct.CorrNo;j++)//存S1的校正值
+		printf("S1Correction[%d] = %.6f \tS1Correction[%d] = %d\r\n",
+				j,commBuf.sensorset.Correct.S1Correction[j],
+				j,commBuf.sensorset.Correct.S2Value[j]);
+}
+
+
+void DOPESETOPENLOOPCOMMAND_Process(void)
+{
+	uint32_t temp=0;
+	uint8_t i=5;
+	commBuf.Command = DOPESETOPENLOOPCOMMAND;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.openloopFrq = temp;temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.openloopAO = *((float*)(&temp));temp=0;
+	commBuf.DO = buf_data_save[i++]; 
+	
+	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+					return; //如果指令重复则返回 不做操作
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E = 0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+
+	printf("Command=0x%2x  DOPESETOPENLOOPCOMMAND\r\n",commBuf.Command);
+	printf("openloopAO=%.2f\r\n",commBuf.openloopAO);
+	printf("openloopFrq=%5d\r\n",commBuf.openloopFrq);
+	printf("DO=%1x\r\n",commBuf.DO);
+
+	commBuf.OpenLoopflag = 1;
+}
+
+
+void DOPEMOVE_Process(void)//上下移动指令 默认加速度
+{
+	uint32_t temp=0;
+	commBuf.Command = DOPEMOVE;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.Direction = buf_data_save[5]; 
+	commBuf.MoveCtrl = buf_data_save[6]; 
+	temp = (buf_data_save[7]<<24) + (buf_data_save[8]<<16) +(buf_data_save[9]<<8) +(buf_data_save[10]);
+	commBuf.Speed = *((float*)(&temp));
+	InputTAN = (buf_data_save[11]<<8) +(buf_data_save[12]);//InputTAN 指令编号
+	
+	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+					return; //如果指令重复则返回 不做操作
+	
+	commBuf.Acc = AL.defaultacc;
+	commBuf.Dec = AL.defaultdec;
+	if(AL.defaultspeedlimit < commBuf.Speed) 
+		commBuf.Speed = AL.defaultspeedlimit;	//最大速度默认值unit/s
+
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E =0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("speed=%f\r\n",commBuf.Speed);
+	printf("dir=%d\r\n",commBuf.Direction);
+	
+	mySemaphore.move.pgInit = 1;
+
+}
+
+void DOPEMOVE_A_Process(void)
+{
+	uint32_t temp=0;
+	commBuf.Command = DOPEMOVE_A;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.Direction = buf_data_save[5]; 
+	commBuf.MoveCtrl = buf_data_save[6]; 
+	temp = (buf_data_save[7]<<24) + (buf_data_save[8]<<16) +(buf_data_save[9]<<8) +(buf_data_save[10]);
+	commBuf.Acc = *((float*)(&temp));
+	temp = (buf_data_save[11]<<24) + (buf_data_save[12]<<16) +(buf_data_save[13]<<8) +(buf_data_save[14]);
+	commBuf.Speed = *((float*)(&temp));
+	InputTAN = (buf_data_save[15]<<8) +(buf_data_save[16]);//InputTAN 指令编号
+	
+	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+					return; //如果指令重复则返回 不做操作
+
+	commBuf.Dec = -commBuf.Acc;
+	if(AL.defaultspeedlimit < commBuf.Speed) 
+		commBuf.Speed = AL.defaultspeedlimit;	//最大速度默认值unit/s
+
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E =0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("speed=%f\r\n",commBuf.Speed);
+	printf("acc=%f\r\n",commBuf.Acc);
+	printf("dir=%d\r\n",commBuf.Direction);
+	
+	mySemaphore.move.pgInit = 1;
+}
+
+/*
+Byte0			MoveCtrl 移动控制模式	0x00 POS_MODE; 0x01 LOAD_MODE;0x02 Extension
+Byte1-4		Speed    速度	
+Byte5-8		Destination
+Byte9-10	InputTAN 指令编号	
+*/
+void DOPEPOS_Process(void)//数据长度 00 0B  数据内容 01   //01 On   00 Off 
+{
+	uint32_t temp=0;
+	commBuf.Command = DOPEPOS;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.MoveCtrl = buf_data_save[5]; 
+	temp = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	commBuf.Speed = *((float*)(&temp));
+	temp= (buf_data_save[10]<<24) + (buf_data_save[11]<<16) +(buf_data_save[12]<<8) +(buf_data_save[13]);
+	commBuf.Destination =  *((float*)(&temp));
+	InputTAN = (buf_data_save[14]<<8) +(buf_data_save[15]);//InputTAN 指令编号
+	
+	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+					return; //如果指令重复则返回 不做操作
+	
+	switch (commBuf.MoveCtrl)
+	{
+	case POS_MODE:
+		commBuf.Acc = Posallctrlpara.DefaultAcc;
+		commBuf.Dec = -Posallctrlpara.DefaultAcc;
+		if(Posallctrlpara.Speed < commBuf.Speed) 
+			commBuf.Speed = Posallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+	case LOAD_MODE:
+		commBuf.Acc = Loadallctrlpara.DefaultAcc;
+		commBuf.Dec = -Loadallctrlpara.DefaultAcc;
+		if(Loadallctrlpara.Speed < commBuf.Speed) 
+			commBuf.Speed = Loadallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+	default:
+		break;
+	}
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP = 	0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E =0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("speed=%f\r\n",commBuf.Speed);
+	printf("dest=%f\r\n",commBuf.Destination);
+	
+	mySemaphore.move.pgInit = 1;
+}
+
+void DOPEPOS_A_Process(void)//数据长度 00 10  数据内容
+{
+	uint32_t temp=0;
+	commBuf.Command = DOPEPOS_A;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.MoveCtrl = buf_data_save[5]; 
+	temp = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	commBuf.Acc = *((float*)(&temp));
+	temp = (buf_data_save[10]<<24) + (buf_data_save[11]<<16) +(buf_data_save[12]<<8) +(buf_data_save[13]);
+	commBuf.Speed = *((float*)(&temp));
+	temp = (buf_data_save[14]<<24) + (buf_data_save[15]<<16) +(buf_data_save[16]<<8) +(buf_data_save[17]);
+	commBuf.Dec =  - *((float*)(&temp));
+	temp = (buf_data_save[18]<<24) + (buf_data_save[19]<<16) +(buf_data_save[20]<<8) +(buf_data_save[21]);
+	commBuf.Destination =  *((float*)(&temp));
+	InputTAN = (buf_data_save[22]<<8) +(buf_data_save[23]);//InputTAN 指令编号
+	
+	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+					return; //如果指令重复则返回 不做操作
+	
+	switch (commBuf.MoveCtrl)
+	{
+	case POS_MODE:
+		if(Posallctrlpara.Speed < commBuf.Speed) 
+		commBuf.Speed = Posallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+	case LOAD_MODE:
+		if(Loadallctrlpara.Speed < commBuf.Speed) 
+		commBuf.Speed = Loadallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+	default:
+		break;
+	}
+
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP = 	0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E =0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+		printf("Acc=%f\r\n",commBuf.Acc);
+		printf("Speed=%f\r\n",commBuf.Speed);
+		printf("Dec=%f\r\n",commBuf.Dec);
+	
+		mySemaphore.move.pgInit = 1;
+}
+
+
+void DOPEHALT_Process(void)////数据长度 00 03  数据内容
+{
+	commBuf.Command = DOPEHALT;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.MoveCtrl = buf_data_save[5]; 
+	InputTAN = (buf_data_save[6]<<8) +(buf_data_save[7]);//InputTAN 指令编号
+	
+	// if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+	// 	if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+	// 				return; //如果指令重复则返回 不做操作
+	
+	switch(commBuf.MoveCtrl)
+	{
+		case POS_MODE:
+			commBuf.Acc = Posallctrlpara.DefaultAcc;
+			commBuf.Dec = -Posallctrlpara.DefaultAcc;
+		break;
+		case LOAD_MODE:
+			commBuf.Acc = Loadallctrlpara.DefaultAcc;
+			commBuf.Dec = -Loadallctrlpara.DefaultAcc;
+		break;
+		case EXTEN_MODE:
+			commBuf.Acc = Extallctrlpara.DefaultAcc;
+			commBuf.Dec = -Extallctrlpara.DefaultAcc;
+		break;
+	}
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 1;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP = 	0;
+	controllerStatus.CTRL_MOVE = 0;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E =0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+		mySemaphore.move.pgInit = 1;
+}
+
+void DOPEPOSEXT_Process(void)//
+{
+	uint32_t temp=0;
+	//xSemaphoreTake(moveparaMutexHandle,portMAX_DELAY);
+	commBuf.Command = DOPEPOSEXT;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.MoveCtrl = buf_data_save[5]; 
+	temp = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	commBuf.Speed = *((float*)(&temp));
+	commBuf.LimitMode = buf_data_save[10]; 
+	temp = (buf_data_save[11]<<24) + (buf_data_save[12]<<16) +(buf_data_save[13]<<8) +(buf_data_save[14]);
+	commBuf.Limit = *((float*)(&temp));
+	commBuf.DestinationCtrl = buf_data_save[15]; 
+	temp = (buf_data_save[16]<<24) + (buf_data_save[17]<<16) +(buf_data_save[18]<<8) +(buf_data_save[19]);
+	commBuf.Destination =  *((float*)(&temp));
+	commBuf.DestinationMode = buf_data_save[20]; 
+	InputTAN = (buf_data_save[21]<<8) +(buf_data_save[22]);//InputTAN 指令编号
+
+	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+					return; //如果指令重复则返回 不做操作
+	switch(commBuf.MoveCtrl)
+	{
+		case POS_MODE:
+			commBuf.Acc = Posallctrlpara.DefaultAcc;
+			commBuf.Dec = -Posallctrlpara.DefaultAcc;
+			if(Posallctrlpara.Speed < commBuf.Speed) 
+				commBuf.Speed = Posallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+		case LOAD_MODE:
+			commBuf.Acc = Loadallctrlpara.DefaultAcc;
+			commBuf.Dec = -Loadallctrlpara.DefaultAcc;
+			if(Loadallctrlpara.Speed < commBuf.Speed) 
+				commBuf.Speed = Loadallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+		case EXTEN_MODE:
+			if(Extallctrlpara.Speed < commBuf.Speed) 
+				commBuf.Speed = Extallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+		default:break;
+	}
+	switch(commBuf.DestinationMode)
+	{
+		case POS_MODE:
+			commBuf.DecLimit = -Posallctrlpara.DefaultAcc;
+			commBuf.DecDestination = -Posallctrlpara.DefaultAcc;
+		break;
+		case LOAD_MODE:
+			commBuf.DecLimit = -Loadallctrlpara.DefaultAcc;
+			commBuf.DecDestination = -Loadallctrlpara.DefaultAcc;
+		break;
+		case EXTEN_MODE:
+			commBuf.DecLimit = -Extallctrlpara.DefaultAcc;
+			commBuf.DecDestination = -Extallctrlpara.DefaultAcc;
+		break;
+		default:break;
+	}
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP = 	0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E =0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+		printf("Command=0x%2x\r\n",commBuf.Command);
+		printf("MoveCtrl=0x%2x\r\n",commBuf.MoveCtrl);
+		printf("Speed=%f\r\n",commBuf.Speed);
+		printf("LimitMode=%d\r\n",commBuf.LimitMode);
+		printf("Limit=%f\r\n",commBuf.Limit);
+		printf("DestinationCtrl=%d\r\n",commBuf.DestinationCtrl);
+		printf("Destination=%f\r\n",commBuf.Destination);
+		printf("DestinationMode=%d\r\n",commBuf.DestinationMode);
+	
+		mySemaphore.move.pgInit = 1;
+}
+
+void DOPECYCLE_Process(void) //0x40
+{
+	uint32_t temp=0;
+	commBuf.Command = DOPECYCLE;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.MoveCtrl = buf_data_save[5]; 
+	temp = (buf_data_save[6]<<24) + (buf_data_save[7]<<16) +(buf_data_save[8]<<8) +(buf_data_save[9]);
+	commBuf.Speed1 = *((float*)(&temp));
+	temp = (buf_data_save[10]<<24) + (buf_data_save[11]<<16) +(buf_data_save[12]<<8) +(buf_data_save[13]);
+	commBuf.Destination1 =  *((float*)(&temp));
+	temp = (buf_data_save[14]<<24) + (buf_data_save[15]<<16) +(buf_data_save[16]<<8) +(buf_data_save[17]);
+	commBuf.Halt1 =  *((float*)(&temp));
+	temp = (buf_data_save[18]<<24) + (buf_data_save[19]<<16) +(buf_data_save[20]<<8) +(buf_data_save[21]);
+	commBuf.Speed2 = *((float*)(&temp));
+	temp = (buf_data_save[22]<<24) + (buf_data_save[23]<<16) +(buf_data_save[24]<<8) +(buf_data_save[25]);
+	commBuf.Destination2 =  *((float*)(&temp));
+	temp = (buf_data_save[26]<<24) + (buf_data_save[27]<<16) +(buf_data_save[28]<<8) +(buf_data_save[29]);
+	commBuf.Halt2 =  *((float*)(&temp));
+	commBuf.Cycles = buf_data_save[30];	
+	temp = (buf_data_save[31]<<24) + (buf_data_save[32]<<16) +(buf_data_save[33]<<8) +(buf_data_save[34]);
+	commBuf.Speed = *((float*)(&temp));
+	temp = (buf_data_save[35]<<24) + (buf_data_save[36]<<16) +(buf_data_save[37]<<8) +(buf_data_save[38]);
+	commBuf.Destination =  *((float*)(&temp));
+	InputTAN = (buf_data_save[39]<<8) +(buf_data_save[40]);//InputTAN 指令编号
+
+	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+					return; //如果指令重复则返回 不做操作
+
+	switch(commBuf.MoveCtrl)
+	{
+		case POS_MODE:
+			commBuf.Acc = Posallctrlpara.DefaultAcc;
+			commBuf.Dec = -Posallctrlpara.DefaultAcc;
+			if(Posallctrlpara.Speed < commBuf.Speed) 
+				commBuf.Speed = Posallctrlpara.Speed;	//最大速度默认值unit/s
+			//速度限制幅度
+			if(Posallctrlpara.Speed < commBuf.Speed)  commBuf.Speed	= Posallctrlpara.Speed;	//最大速度默认值unit/s
+			if(Posallctrlpara.Speed < commBuf.Speed1) commBuf.Speed1	= Posallctrlpara.Speed;	//最大速度默认值unit/s
+			if(Posallctrlpara.Speed < commBuf.Speed2) commBuf.Speed2	= Posallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+		case LOAD_MODE:
+			commBuf.Acc = Loadallctrlpara.DefaultAcc;
+			commBuf.Dec = -Loadallctrlpara.DefaultAcc;
+			if(Loadallctrlpara.Speed < commBuf.Speed) 
+				commBuf.Speed = Loadallctrlpara.Speed;	//最大速度默认值unit/s
+			//速度限制幅度
+			if(Loadallctrlpara.Speed < commBuf.Speed)  commBuf.Speed	= Loadallctrlpara.Speed;	//最大速度默认值unit/s
+			if(Loadallctrlpara.Speed < commBuf.Speed1) commBuf.Speed1	= Loadallctrlpara.Speed;	//最大速度默认值unit/s
+			if(Loadallctrlpara.Speed < commBuf.Speed2) commBuf.Speed2	= Loadallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+		case EXTEN_MODE:
+			if(Extallctrlpara.Speed < commBuf.Speed) 
+				commBuf.Speed = Extallctrlpara.Speed;	//最大速度默认值unit/s
+			//速度限制幅度
+			if(Extallctrlpara.Speed < commBuf.Speed)  commBuf.Speed	= Extallctrlpara.Speed;	//最大速度默认值unit/s
+			if(Extallctrlpara.Speed < commBuf.Speed1) commBuf.Speed1	= Extallctrlpara.Speed;	//最大速度默认值unit/s
+			if(Extallctrlpara.Speed < commBuf.Speed2) commBuf.Speed2	= Extallctrlpara.Speed;	//最大速度默认值unit/s
+		break;
+		default:break;
+	}
+
+		
+	pgcycle.cycles = commBuf.Cycles;
+	pgcycle.destination = commBuf.Destination;
+	pgcycle.destination1 = commBuf.Destination1;
+	pgcycle.destination2 = commBuf.Destination2;
+	pgcycle.speed = commBuf.Speed;
+	pgcycle.speed1 = commBuf.Speed1;		
+	pgcycle.speed2 = commBuf.Speed2;		
+	pgcycle.halt1 = commBuf.Halt1;
+	pgcycle.halt2 = commBuf.Halt2;		
+	pgcycle.count_step = 0;
+	pgcycle.count_cycle=0;
+
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP = 	0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E =0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+		printf("Speed1=%f\r\n",commBuf.Speed1);
+		printf("Destination1=%f\r\n",commBuf.Destination1);
+		printf("Halt1=%f\r\n",commBuf.Halt1);	
+		printf("Speed2=%f\r\n",commBuf.Speed2);
+		printf("Destination2=%f\r\n",commBuf.Destination2);
+		printf("Halt2=%f\r\n",commBuf.Halt2);	
+		printf("Cycles=%d\r\n",commBuf.Cycles);
+		printf("Speed=%f\r\n",commBuf.Speed);
+		printf("Destination=%f\r\n",commBuf.Destination);
+
+	mySemaphore.move.pgInit = 1;
+}
+
+void DOPEDYNCYCLE_Process(void)
+{
+	uint32_t temp=0;
+	uint16_t i=5;
+	commBuf.Command = DOPEDYNCYCLE;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.pgdyn.waveform = buf_data_save[i++]; 
+	commBuf.pgdyn.modify = buf_data_save[i++]; 
+	commBuf.pgdyn.peakctrl = buf_data_save[i++]; 
+	commBuf.pgdyn.movectrl = buf_data_save[i++]; 
+	commBuf.pgdyn.relativedestination = buf_data_save[i++]; temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.speedtostart = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.offset = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.amplitude = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.haltatplusamplitude = temp;temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.haltatminusamplitude = temp;temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.frequency = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.halfcycles = temp;temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.speedtodestination = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.pgdyn.destination = *((float*)(&temp));temp=0;
+	//扫频待添加
+	
+	
+	commBuf.MoveCtrl = commBuf.pgdyn.movectrl; 
+
+	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+					return; //如果指令重复则返回 不做操作
+	
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP = 	0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E =0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+		printf("commBuf.pgdyn:\r\n");
+		printf("waveform=0x%2x\r\n",commBuf.pgdyn.waveform);
+		printf("modify=%d\r\n",commBuf.pgdyn.modify);
+		printf("peakctrl=%d\r\n",commBuf.pgdyn.peakctrl);
+		printf("movectrl=0x%2x\r\n",commBuf.pgdyn.movectrl);
+		printf("relativedestination=%d\r\n",commBuf.pgdyn.relativedestination);
+		printf("speedtostart=%f\r\n",commBuf.pgdyn.speedtostart);
+		printf("offset=%f\r\n",commBuf.pgdyn.offset);
+		printf("amplitude=%f\r\n",commBuf.pgdyn.amplitude);
+		printf("haltatplusamplitude=%f\r\n",commBuf.pgdyn.haltatplusamplitude);
+		printf("haltatminusamplitude=%f\r\n",commBuf.pgdyn.haltatminusamplitude);
+		printf("frequency=%f\r\n",commBuf.pgdyn.frequency);
+		printf("halfcycles=%d\r\n",commBuf.pgdyn.halfcycles);
+		printf("speedtodestination=%f\r\n",commBuf.pgdyn.speedtodestination);
+		printf("destination=%f\r\n",commBuf.pgdyn.destination);	
+	
+		stateFlag.DynCycle_OffsetReach = 0;
+		mySemaphore.move.pgInit = 1;
+}
+
+
+void RDOUTPUTPARA_Process(void)//读取输出参数
+{
+	uint32_t temp=0;
+	uint16_t i=5;
+	uint8_t j=0;
+	commBuf.Command = RDOUTPUTPARA;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	i=0;
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)OutputPara.Signal,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)OutputPara.Sign,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&OutputPara.MaxValue),buf_com,&i);//DataTransmitPeriod
+	printf("OutputPara.MaxValue:%f\r\n",OutputPara.MaxValue);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&OutputPara.MinValue),buf_com,&i);//DataTransmitPeriod
+	printf("OutputPara.MinValue:%f\r\n",OutputPara.MinValue);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&OutputPara.InitValue),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&OutputPara.Offset),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&OutputPara.SignalFrequency),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&OutputPara.MaxVoltage),buf_com,&i);//DataTransmitPeriod
+	printf("OutputPara.MaxVoltage:%f\r\n",OutputPara.MaxVoltage);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&OutputPara.MaxCurrent),buf_com,&i);//DataTransmitPeriod
+
+	send_ring_fifo_push(i,buf_com,0x8A);//下位机会返回0x8A功能码
+}
+void WROUTPUTPARA_Process(OUTPUTPARA *x)//写入输出参数
+{
+	uint32_t temp=0; 
+	uint16_t i=5;
+	uint8_t  j=0;
+	commBuf.Command = WROUTPUTPARA;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	x->Signal = buf_data_save[i++];
+	x->Sign = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	x->MaxValue = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	x->MinValue = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	x->InitValue = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	x->Offset = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	x->SignalFrequency = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	x->MaxVoltage = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	x->MaxCurrent = *((float*)(&temp));temp=0;
+	
+	mySemaphore.comm.outputUpdate = 1;
+	printf("Command=0x%2x WROUTPUTPARA\t\r\n",commBuf.Command);
+	printf("Signal=%d\t\r\n",x->Signal);
+	printf("Sign=%d\t\r\n",x->Sign);
+	printf("MaxValue=%f\t\r\n",x->MaxValue);
+	printf("MinValue=%f\t\r\n",x->MinValue);
+	printf("InitValue=%f\t\r\n",x->InitValue);
+	printf("Offset=%f\t\r\n",x->Offset);
+	printf("SignalFrequency=%f\t\r\n",x->SignalFrequency);
+	printf("MaxVoltage=%f\t\r\n",x->MaxVoltage);
+	printf("MaxCurrent=%f\t\r\n",x->MaxCurrent);
+}
+
+void RDETHPARA_Process(void)//读以太网参数
+{
+	//返回0x8A指令 上发以太网参数
+	uint16_t i=0,j=0;
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	buf_com[i++] = utc_eth.Mode;//以太网协议
+	for(j=0;j<4;j++) buf_com[i++]=dest_ip[j];//服务器IP地址
+	Variable_Type_Conversion(UINT16_TYPE,*(uint32_t*)(&dest_port),buf_com,&i);//服务器端口号
+	for(j=0;j<4;j++) buf_com[i++]=gWIZNETINFO.ip[j];//本地IP地址
+	for(j=0;j<6;j++) buf_com[i++]=gWIZNETINFO.mac[j];//本地MAC地址
+	send_ring_fifo_push(i,buf_com,0x8A);//下位机会返回0x8A功能码
+}
+
+void WRETHPARA_Process(void)//下发以太网参数*
+{
+	uint8_t i=0;
+	ethBuf.EthMode = buf_data_save[5]; 
+	for(i=0;i<4;i++) ethBuf.ServerIp[i]= buf_data_save[6+i];
+	ethBuf.ServerPort = (buf_data_save[10]<<8) + buf_data_save[11];
+	for(i=0;i<4;i++) ethBuf.LocalIp[i]= buf_data_save[12+i];
+	for(i=0;i<6;i++) ethBuf.LocalMac[i]= buf_data_save[16+i];
+	printf("Reset Ethernet Config\r\n");
+	printf("ETH_Mode:0x%2x\r\n",ethBuf.EthMode);
+	printf("ServerIp:%d,%d,%d,%d\r\n",ethBuf.ServerIp[0],ethBuf.ServerIp[1],ethBuf.ServerIp[2],ethBuf.ServerIp[3]);
+	printf("ServerPort:%d\r\n",ethBuf.ServerPort);
+	printf("LocalIp:%d,%d,%d,%d\r\n",ethBuf.LocalIp[0],ethBuf.LocalIp[1],ethBuf.LocalIp[2],ethBuf.LocalIp[3]);
+	printf("LocalMac:0x%2x,0x%2x,0x%2x,0x%2x,0x%2x,0x%2x\r\n",ethBuf.LocalMac[0],ethBuf.LocalMac[1],ethBuf.LocalMac[2],ethBuf.LocalMac[3],ethBuf.LocalMac[4],ethBuf.LocalMac[5]);
+	
+	/*待加入
+	  存入控制器EEPROM  重启系统 重新配置以太网参数	
+	*/	
+}
+
+void RDSYSPARA_Process(void)//读取系统参数
+{
+	uint32_t temp=0;
+	uint16_t i=0;
+	commBuf.Command = RDSYSPARA;
+	//运动模式发生改变
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	Variable_Type_Conversion(UINT16_TYPE,*(uint32_t*)(&SysPara.TransmitDataPeriod),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&SysPara.ControllerStructure),buf_com,&i);//DataTransmitPeriod
+	send_ring_fifo_push(i,buf_com,0x8C);//下位机会返回0x8C功能码
+}
+
+void WRSYSPARA_Process(void)//写入系统参数
+{
+	uint32_t temp=0;
+	uint16_t i=5;
+	commBuf.Command = WRSYSPARA;
+	//运动模式发生改变
+	temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	commBuf.SysPara.TransmitDataPeriod = temp;
+	commBuf.SysPara.ControllerStructure = buf_data_save[i++];
+	
+	mySemaphore.comm.transperiodUpdate = 1;
+	mySemaphore.comm.ctrlstructUpdate = 1;
+	
+	//返回0x8C
+	i=0;
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	Variable_Type_Conversion(UINT16_TYPE,*(uint32_t*)(&commBuf.SysPara.TransmitDataPeriod),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&commBuf.SysPara.ControllerStructure),buf_com,&i);//DataTransmitPeriod
+	send_ring_fifo_push(i,buf_com,0x8C);//下位机会返回0x8C功能码
+	
+	printf("Command=0x%2x RDSYSPARA\t\r\n",commBuf.Command);
+	printf("DataTransmitPeriod=%dms\t\r\n",commBuf.SysPara.TransmitDataPeriod);
+	printf("ControllerStructure=%d\r\n",commBuf.SysPara.ControllerStructure);
+}
+
+void SETTARE_Process(void)
+{
+	uint16_t i=5;
+	uint8_t movectrl=0;
+	commBuf.Command = SETTARE;//用于在loopcontrol中作模式切换
+	
+	commBuf.Connector = buf_data_save[i++];
+	//对应操作，或者置标志位或互斥信号量
+	AL.tare.flag = 1;
+	AL.tare.connector = commBuf.Connector;
+	
+	
+	printf("Command=0x%2x SETTARE\t\r\n",commBuf.Command);
+	printf("Connector=%d\t\r\n",commBuf.Connector);
+}
+
+void CurrentData_Fifo_Push(void)
+{
+	uint32_t temp=0;
+	uint16_t i=0,k=0,l=0;
+	cdatatrans.Position=pose.orig;
+	cdatatrans.Load	= force.filter;
+	cdatatrans.Extensometer1 = ads1274_par.value_calcu[2];
+	cdatatrans.Extensometer2 = ads1274_par.value_calcu[0];
+	cdatatrans.ManualBox = (DI.ALL & 0x003F);
+	cdatatrans.InSignals = (DI.ALL >> 6) & 0x00FF;
+	temp = (DO.DO5_RL<<6) + (DO.DO4_RL<<5) + (DO.DO3<<4) + (DO.DO2<<3) + (DO.DO1<<2) 
+			+ ((DO.DIR)<<1) 
+			+ (DO.SON);
+	cdatatrans.OutSignals= (uint16_t)temp;temp=0;
+	cdatatrans.CtrlState1= 0;
+	cdatatrans.CtrlState2= 0;
+	cdatatrans.UpperLimits_state=stateFlag.UpperLimits;
+	cdatatrans.LowerLimits_state=stateFlag.LowerLimits;
+	cdatatrans.SensorConnected=(DB9.CON3.value<<2) + (DB9.CON2.value<<1) + DB9.CON1.value;//Byte27.0: POS_MODE Byte27.1: LOAD_MODE Byte27.2: EXTENSION1 Byte27.3: EXTENSION2
+	cdatatrans.SensorKeyPressed=(DB9.ADJ3.value<<2) + (DB9.ADJ2.value<<1) + DB9.ADJ1.value;//Byte28.0: POS_MODE Byte28.1: LOAD_MODE Byte28.2: EXTENSION1 Byte28.3: EXTENSION2
+	cdatatrans.ModuleError=0;
+	cdatatrans.PosSpeed=speedPose.filter;
+//	printf("speedPose.filter:%f\r\n",speedPose.filter);
+	cdatatrans.LoadSpeed=0;
+	cdatatrans.Extensometer1Speed=0;
+	cdatatrans.Extensometer2Speed=0;
+	cdatatrans.PosEncoderCode = pose.code;
+	cdatatrans.LoadADCCode = force.code;
+	cdatatrans.Extension1ADCCode = strain1.code;
+	cdatatrans.Extension2ADCCode = strain2.code;
+	//cdatatrans.pgst	= pg.st;
+	cdatatrans.pgst	= pg.st_last;
+	cdatatrans.pgLoadst	= pgLoad.st;
+
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.Position),cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.Load),cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.Extensometer1),cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.Extensometer2),cdatabuf,&i);
+	Variable_Type_Conversion(UINT16_TYPE,(uint32_t)cdatatrans.ManualBox,cdatabuf,&i);
+	Variable_Type_Conversion(UINT16_TYPE,(uint32_t)cdatatrans.InSignals,cdatabuf,&i);
+	Variable_Type_Conversion(UINT16_TYPE,(uint32_t)cdatatrans.OutSignals,cdatabuf,&i);
+	Variable_Type_Conversion(UINT16_TYPE,(uint32_t)cdatatrans.CtrlState1,cdatabuf,&i);
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)cdatatrans.CtrlState2,cdatabuf,&i);
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)cdatatrans.UpperLimits_state,cdatabuf,&i);
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)cdatatrans.LowerLimits_state,cdatabuf,&i);
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)cdatatrans.SensorConnected,cdatabuf,&i);
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)cdatatrans.SensorKeyPressed,cdatabuf,&i);
+	Variable_Type_Conversion(UINT32_TYPE,cdatatrans.ModuleError,cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.PosSpeed),cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.LoadSpeed),cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.Extensometer1Speed),cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.Extensometer2Speed),cdatabuf,&i);
+	Variable_Type_Conversion(UINT32_TYPE,cdatatrans.PosEncoderCode,cdatabuf,&i);
+	Variable_Type_Conversion(UINT32_TYPE,cdatatrans.LoadADCCode,cdatabuf,&i);
+	Variable_Type_Conversion(UINT32_TYPE,cdatatrans.Extension1ADCCode,cdatabuf,&i);
+	Variable_Type_Conversion(UINT32_TYPE,cdatatrans.Extension2ADCCode,cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.pgst),cdatabuf,&i);
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&cdatatrans.pgLoadst),cdatabuf,&i);
+	
+	  send_ring_fifo_push(i,cdatabuf,0xA0);//下位机会返回0xA0功能码
+	
+#ifdef CurrentData_debug
+		for(k=0;k<SEND_FIFO_SIZE;k++)
+				{
+					printf("SEND Fifo%d  ",k);
+						for(l=0;l<70;l++)
+						printf("%2x",send_fifo_data[k][l]);
+					printf("\r\n");
+				}
+				printf("\r\n \r\n");
+#endif
+	
+}
+
+void Emergency_Halt(void)
+{
+	commBuf.Command = DOPEHALT;//紧急停止
+	commBuf.MoveCtrl = AL.movectrl;//保持之前的控制状态 ***
+	switch(commBuf.MoveCtrl)
+	{
+		case POS_MODE:
+			commBuf.Acc = Posallctrlpara.DefaultAcc;
+			commBuf.Dec = -Posallctrlpara.DefaultAcc;
+		break;
+		case LOAD_MODE:
+			commBuf.Acc = Loadallctrlpara.DefaultAcc;
+			commBuf.Dec = -Loadallctrlpara.DefaultAcc;
+		break;
+		case EXTEN_MODE:
+			commBuf.Acc = Extallctrlpara.DefaultAcc;
+			commBuf.Dec = -Extallctrlpara.DefaultAcc;
+		break;
+	}
+	mySemaphore.move.pgInit = 1;
+}
+
+void Variable_Type_Conversion(uint8_t type,uint32_t x,uint8_t* buf,uint16_t* bufnum)
+{
+	switch(type)
+	{
+		case UINT8_TYPE:
+			  buf[(*bufnum)++]=(uint8_t)x;
+			break;
+		case UINT16_TYPE:
+			  buf[(*bufnum)++]=(uint8_t)(x>>8);
+			  buf[(*bufnum)++]=(uint8_t)x;
+			break;	
+		case FLOAT_TYPE:
+		case UINT32_TYPE:
+			  buf[(*bufnum)++]=(uint8_t)(x>>24);
+			  buf[(*bufnum)++]=(uint8_t)(x>>16);
+			  buf[(*bufnum)++]=(uint8_t)(x>>8);
+			  buf[(*bufnum)++]=(uint8_t)x;
+			break;
+		default:
+			break;
+	}
+}
+
+
+void RDSENSORDATA_Process(void)//读取传感器数据
+{
+	uint32_t temp=0;
+	uint16_t i=5;
+	uint8_t j=0;
+	commBuf.Command = RDSENSORDATA;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	sensor_connector = buf_data_save[i++];
+	printf("RDSENSORDATA Connector=%d\t\r\n",sensor_connector);
+	
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	i=0;
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)sensor_connector,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SenData[sensor_connector].Sensortype,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SenData[sensor_connector].Sign,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&SenData[sensor_connector].NominalValue),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&SenData[sensor_connector].NominalSensitive),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SenData[sensor_connector].Day,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SenData[sensor_connector].Month,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT16_TYPE,(uint32_t)SenData[sensor_connector].Year,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SenData[sensor_connector].LinPoint,buf_com,&i);//DataTransmitPeriod
+	
+	if(SenData_combuf[sensor_connector].LinPoint > 0)
+	{
+		for(;j<SenData[sensor_connector].LinPoint;j++)
+		{
+			Variable_Type_Conversion(UINT32_TYPE,SenData[sensor_connector].LinV[j].ADCCode,buf_com,&i);//DataTransmitPeriod
+			Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&SenData[sensor_connector].LinV[j].RefValue),buf_com,&i);//DataTransmitPeriod
+			Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&SenData[sensor_connector].LinV[j].CorrectionFactor),buf_com,&i);//DataTransmitPeriod
+		}
+	}
+	send_ring_fifo_push(i,buf_com,0x88);//下位机会返回0x88功能码
+}
+void WRSENSORDATA_Process(void)//写入传感器数据
+{
+	uint32_t temp=0; 
+	uint16_t i=5;
+	uint8_t j=0;
+	commBuf.Command = WRSENSORDATA;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	sensor_connector = buf_data_save[i++];
+	SenData_combuf[sensor_connector].Sensortype = buf_data_save[i++];
+	SenData_combuf[sensor_connector].Sign = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	SenData_combuf[sensor_connector].NominalValue= *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	SenData_combuf[sensor_connector].NominalSensitive= *((float*)(&temp));temp=0;
+	SenData_combuf[sensor_connector].Day = buf_data_save[i++];
+	SenData_combuf[sensor_connector].Month = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	SenData_combuf[sensor_connector].Year= temp;temp=0;
+	SenData_combuf[sensor_connector].LinPoint= buf_data_save[i++];
+	
+	if(SenData_combuf[sensor_connector].LinPoint > 0)
+	{
+		for(;j<SenData_combuf[sensor_connector].LinPoint;j++)
+		{
+			temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+			SenData_combuf[sensor_connector].LinV[j].ADCCode = temp;temp=0;
+			temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+			SenData_combuf[sensor_connector].LinV[j].RefValue = *((float*)(&temp));temp=0;
+			temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+			SenData_combuf[sensor_connector].LinV[j].CorrectionFactor = *((float*)(&temp));temp=0;
+		}
+	}
+	mySemaphore.comm.sendataUpdate = 1;
+	
+	
+//	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+//		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+//					return; //如果指令重复则返回 不做操作
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E = 0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("COMMAND:WRSENSORDATA\t\r\n");
+	printf("Connector=%d\t\r\n",sensor_connector);
+	printf("Sensortype=%2x\t\r\n",SenData_combuf[sensor_connector].Sensortype);
+	printf("Sign=%d\t\r\n",SenData_combuf[sensor_connector].Sign);
+	printf("NominalValue=%f\t\r\n",SenData_combuf[sensor_connector].NominalValue);
+	printf("NominalSensitive=%f\t\r\n",SenData_combuf[sensor_connector].NominalSensitive);
+	printf("Last Modified Time:%d\t%d\t%d\t\r\n",SenData_combuf[sensor_connector].Year,SenData_combuf[sensor_connector].Month,SenData_combuf[sensor_connector].Day);
+	printf("LinPoint=%d\t\r\n",SenData_combuf[sensor_connector].LinPoint);
+	if(SenData_combuf[sensor_connector].LinPoint > 0)
+	{
+		for(j=0;j<SenData_combuf[sensor_connector].LinPoint;j++)
+		{
+			printf("LinV[%d].ADCCode=%d\t\r\n",j,SenData_combuf[sensor_connector].LinV[j].ADCCode);
+			printf("LinV[%d].RefValue=%f\t\r\n",j,SenData_combuf[sensor_connector].LinV[j].RefValue);
+			printf("LinV[%d].CorrectionFactor=%f\t\r\n",j,SenData_combuf[sensor_connector].LinV[j].CorrectionFactor);
+		}
+	}
+}
+
+void RDSENSORBIGDEFORMATIONDATA_Process(void)//读取大变形传感器数据
+{
+	uint32_t temp=0;
+	uint16_t i=5;
+	uint8_t j=0;
+	commBuf.Command = RDSENSORBIGDEFORMATIONDATA;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	sensor_connector = buf_data_save[i++];
+	printf("RDSENSORDATA Connector=%d\t\r\n",sensor_connector);
+	
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	i=0;
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)sensor_connector,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SensorBigDeformationData[sensor_connector].Sensortype,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SensorBigDeformationData[sensor_connector].Sign,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&SensorBigDeformationData[sensor_connector].NominalValue),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&SensorBigDeformationData[sensor_connector].CollectType),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&SensorBigDeformationData[sensor_connector].NominalSensitive1),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&SensorBigDeformationData[sensor_connector].NominalSensitive2),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SensorBigDeformationData[sensor_connector].Day,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)SensorBigDeformationData[sensor_connector].Month,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(UINT16_TYPE,(uint32_t)SensorBigDeformationData[sensor_connector].Year,buf_com,&i);//DataTransmitPeriod
+
+	send_ring_fifo_push(i,buf_com,0x89);//下位机会返回0x88功能码
+}
+void WRSENSORBIGDEFORMATIONDATA_Process(void)//写入大变形传感器数据
+{
+	uint32_t temp=0; 
+	uint16_t i=5;
+	commBuf.Command = WRSENSORBIGDEFORMATIONDATA;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	sensor_connector = buf_data_save[i++];
+	SensorBigDeformationData[sensor_connector].Sensortype = buf_data_save[i++];
+	SensorBigDeformationData[sensor_connector].Sign = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	SensorBigDeformationData[sensor_connector].NominalValue= *((float*)(&temp));temp=0;
+	SensorBigDeformationData[sensor_connector].CollectType = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	SensorBigDeformationData[sensor_connector].NominalSensitive1= *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	SensorBigDeformationData[sensor_connector].NominalSensitive2= *((float*)(&temp));temp=0;
+	SensorBigDeformationData[sensor_connector].Day = buf_data_save[i++];
+	SensorBigDeformationData[sensor_connector].Month = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	SensorBigDeformationData[sensor_connector].Year= temp;temp=0;
+	
+	
+//	if(commBuf.Command == AL.command)//判断上次指令和本次指令是否重复
+//		if(	memcmp(&commBuf,&commBufLast,sizeof(commBuf)) == 0)	//判断数据具体参数是否一致
+//					return; //如果指令重复则返回 不做操作
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E = 0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("Connector=%d\t\r\n",sensor_connector);
+	printf("Sensortype=%d\t\r\n",SensorBigDeformationData[sensor_connector].Sensortype);
+	printf("Sign=%d\t\r\n",SensorBigDeformationData[sensor_connector].Sign);
+	printf("NominalValue=%f\t\r\n",SensorBigDeformationData[sensor_connector].NominalValue);
+	printf("CollectType=%d\t\r\n",SensorBigDeformationData[sensor_connector].CollectType);
+	printf("NominalSensitive1=%f\t\r\n",SensorBigDeformationData[sensor_connector].NominalSensitive1);
+	printf("NominalSensitive2=%f\t\r\n",SensorBigDeformationData[sensor_connector].NominalSensitive2);
+	printf("Last Modified Time:%d\t%d\t%d\t\r\n",SensorBigDeformationData[sensor_connector].Year,
+												 SensorBigDeformationData[sensor_connector].Month,
+												 SensorBigDeformationData[sensor_connector].Day);
+}
+
+
+void DOPERDNOMINALACCSPEED_Process(void)//读取位置生成器标称值
+{
+	uint32_t temp=0;
+	uint16_t i=5;
+	uint8_t j=0;
+	ALLCTRLPARA *p=0;
+	commBuf.Command = DOPERDNOMINALACCSPEED;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	commBuf.MoveCtrl = buf_data_save[i++];
+	printf("Command=0x%2x DOPERDNOMINALACCSPEED\t\r\n",commBuf.Command);
+	printf("MoveCtrl=%d\t\r\n",commBuf.MoveCtrl);
+	
+	switch(commBuf.MoveCtrl)
+	{
+		case POS_MODE:
+			p = &Posallctrlpara;
+			break;
+		case LOAD_MODE:
+			p = &Loadallctrlpara;
+			break;
+		case EXTEN_MODE:
+			p = &Extallctrlpara;
+			break;
+		default:break;
+	}
+		
+		
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	i=0;
+	
+	Variable_Type_Conversion(UINT8_TYPE,(uint32_t)commBuf.MoveCtrl,buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&p->Nominal.Acc),buf_com,&i);//DataTransmitPeriod
+	Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&p->Nominal.Speed),buf_com,&i);//DataTransmitPeriod
+
+	send_ring_fifo_push(i,buf_com,0x83);//下位机会返回0x83功能码
+	
+}
+void DOPESETNOMINALACCSPEED_Process(void)//设置位置生成器标称值
+{
+	uint32_t temp=0; 
+	uint16_t i=5;
+	uint8_t movectrl=0;
+	float Acc,Speed;
+	commBuf.Command = DOPESETNOMINALACCSPEED;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	movectrl = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	Acc = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	Speed = *((float*)(&temp));temp=0;
+	
+	switch(movectrl){
+		case POS_MODE:
+			commBuf.Pos.Nominal.Acc = Acc;
+			commBuf.Pos.Nominal.Speed = Speed;
+			//演示用暂时放着 后面得改到loopctrl中
+			Posallctrlpara.Nominal.Acc = commBuf.Pos.Nominal.Acc;
+			Posallctrlpara.Nominal.Speed = commBuf.Pos.Nominal.Speed;
+			mySemaphore.mram.write_nominal_pos = 1;
+			log_i("mySemaphore.mram.write_nominal_pos = 1");
+		break;
+		case LOAD_MODE:
+			commBuf.Pos.Nominal.Acc = Acc;
+			commBuf.Pos.Nominal.Speed = Speed;
+			//演示用暂时放着 后面得改到loopctrl中
+			Loadallctrlpara.Nominal.Acc = commBuf.Pos.Nominal.Acc;
+			Loadallctrlpara.Nominal.Speed = commBuf.Pos.Nominal.Speed;
+			mySemaphore.mram.write_nominal_load = 1;
+		break;
+		case EXTEN_MODE:
+			commBuf.Pos.Nominal.Acc = Acc;
+			commBuf.Pos.Nominal.Speed = Speed;
+			//演示用暂时放着 后面得改到loopctrl中
+			Extallctrlpara.Nominal.Acc = commBuf.Pos.Nominal.Acc;
+			Extallctrlpara.Nominal.Speed = commBuf.Pos.Nominal.Speed;
+			mySemaphore.mram.write_nominal_ext = 1;
+		break;
+		default:break;
+	}
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E = 0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("Command=0x%2x DOPESETNOMINALACCSPEED\t\r\n",commBuf.Command);
+	printf("MoveCtrl=%d\t\r\n",movectrl);
+	printf("NominalAcc=%f\t\r\n",Acc);
+	printf("NominalSpeed=%f\t\r\n",Speed);
+	
+}
+
+void DOPEPOSPID_Process(void)//设定位置PID参数
+{
+	uint32_t temp=0; 
+	uint16_t i=5;
+	uint8_t movectrl=0;
+	float P,I,D;
+	commBuf.Command = DOPEPOSPID;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	movectrl = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	P = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	I = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	D = *((float*)(&temp));temp=0;
+	
+	switch(movectrl)
+	{
+		case POS_MODE:
+			commBuf.Pos.Pid.P = P;
+			commBuf.Pos.Pid.I = I;
+			commBuf.Pos.Pid.D = D;
+			//演示用暂时放着 后面得改到loopctrl中
+			Posallctrlpara.PosPid.P = P;
+			Posallctrlpara.PosPid.I = I;
+			Posallctrlpara.PosPid.D = D;
+			mySemaphore.pid.pos = 1;
+			break;
+		case LOAD_MODE:
+			commBuf.Load.Pid.P = P;
+			commBuf.Load.Pid.I = I;
+			commBuf.Load.Pid.D = D;
+		//演示用暂时放着 后面得改到loopctrl中
+			Loadallctrlpara.PosPid.P = P;
+			Loadallctrlpara.PosPid.I = I;
+			Loadallctrlpara.PosPid.D = D;
+			mySemaphore.pid.load = 1;
+			break;
+		case EXTEN_MODE:
+			commBuf.Ext.Pid.P = P;
+			commBuf.Ext.Pid.I = I;
+			commBuf.Ext.Pid.D = D;
+		//演示用暂时放着 后面得改到loopctrl中
+			Extallctrlpara.PosPid.P = P;
+			Extallctrlpara.PosPid.I = I;
+			Extallctrlpara.PosPid.D = D;
+			mySemaphore.pid.ext = 1;
+			break;
+		default:break;
+	}
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E = 0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("Command=0x%2x DOPEPOSPID\t\r\n",commBuf.Command);
+	printf("MoveCtrl=%d\t\r\n",movectrl);
+	printf("P=%f\t\r\n",P);
+	printf("I=%f\t\r\n",I);
+	printf("D=%f\t\r\n",D);
+}
+
+void DOPESPEEDPID_Process(void)//设置速度PID参数
+{
+	uint32_t temp=0; 
+	uint16_t i=5;
+	uint8_t movectrl=0;
+	float P,I,D;
+	commBuf.Command = DOPESPEEDPID;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	movectrl = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	P = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	I = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	D = *((float*)(&temp));temp=0;
+	
+	switch(movectrl)
+	{
+		case POS_MODE:
+			commBuf.Pos.PidSpeed.P = P;
+			commBuf.Pos.PidSpeed.P = I;
+			commBuf.Pos.PidSpeed.P = D;
+			//leave it there for now ,and then change it to loopctrl
+			Posallctrlpara.SpeedPid.P = P;
+			Posallctrlpara.SpeedPid.I = I;
+			Posallctrlpara.SpeedPid.D = D;
+			break;
+		case LOAD_MODE:
+			commBuf.Load.PidSpeed.P = P;
+			commBuf.Load.PidSpeed.I = I;
+			commBuf.Load.PidSpeed.D = D;
+			//leave it there for now ,and then change it to loopctrl
+			Loadallctrlpara.SpeedPid.P = P;
+			Loadallctrlpara.SpeedPid.I = I;
+			Loadallctrlpara.SpeedPid.D = D;
+			break;
+		case EXTEN_MODE:
+			commBuf.Ext.PidSpeed.P = P;
+			commBuf.Ext.PidSpeed.I = I;
+			commBuf.Ext.PidSpeed.D = D;
+			//leave it there for now ,and then change it to loopctrl
+			Extallctrlpara.SpeedPid.P = P;
+			Extallctrlpara.SpeedPid.I = I;
+			Extallctrlpara.SpeedPid.D = D;
+			break;
+		default:break;
+	}
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E = 0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("Command=0x%2x DOPESPEEDPID\t\r\n",commBuf.Command);
+	printf("MoveCtrl=%d\t\r\n",movectrl);
+	printf("P=%f\t\r\n",P);
+	printf("I=%f\t\r\n",I);
+	printf("D=%f\t\r\n",D);
+}
+
+void DOPERDSPEEDPID_Process(void)//读取速度PID参数
+{
+	uint8_t movectrl=0,highpressure=0;
+	uint16_t i=5;
+	movectrl = buf_data_save[i++];
+	highpressure = buf_data_save[i++];
+	memset(buf_com,0,sizeof(buf_com));//buf清空
+	i=0;
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&movectrl),buf_com,&i);
+	Variable_Type_Conversion(UINT8_TYPE,*(uint32_t*)(&highpressure),buf_com,&i);
+	switch(movectrl)
+	{
+		case POS_MODE:	
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.SpeedPid.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.SpeedPid.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.SpeedPid.D),buf_com,&i);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.SpeedPid_Hp.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.SpeedPid_Hp.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Posallctrlpara.SpeedPid_Hp.D),buf_com,&i);
+					}
+		break;
+		case LOAD_MODE: 
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.SpeedPid.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.SpeedPid.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.SpeedPid.D),buf_com,&i);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.SpeedPid_Hp.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.SpeedPid_Hp.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Loadallctrlpara.SpeedPid_Hp.D),buf_com,&i);
+					}
+		break;
+		case EXTEN_MODE:	
+					if(highpressure == 0)
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.SpeedPid.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.SpeedPid.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.SpeedPid.D),buf_com,&i);
+					}
+					else
+					{
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.SpeedPid_Hp.P),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.SpeedPid_Hp.I),buf_com,&i);
+						Variable_Type_Conversion(FLOAT_TYPE,*(uint32_t*)(&Extallctrlpara.SpeedPid_Hp.D),buf_com,&i);
+					}
+		break;
+		default:break;
+	}
+	send_ring_fifo_push(i,buf_com,0x86);//下位机会返回0x88功能码
+}
+
+void DOPEWRSPEEDPID_Process(void)//写入速度PID参数
+{
+	uint32_t temp=0; 
+	uint16_t i=5;
+	uint8_t movectrl=0,highpressure=0;
+	float P,I,D;
+	commBuf.Command = DOPEWRSPEEDPID;//用于在loopcontrol中作模式切换
+	//运动模式发生改变
+	movectrl = buf_data_save[i++];
+	highpressure = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	P = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	I = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	D = *((float*)(&temp));temp=0;
+	
+	switch(movectrl)
+	{
+		case POS_MODE:
+			if(highpressure == 0){
+			commBuf.Pos.PidSpeed.P = P;
+			commBuf.Pos.PidSpeed.P = I;
+			commBuf.Pos.PidSpeed.P = D;
+			//leave it there for now ,and then change it to loopctrl
+			Posallctrlpara.SpeedPid.P = P;
+			Posallctrlpara.SpeedPid.I = I;
+			Posallctrlpara.SpeedPid.D = D;
+			mySemaphore.mram.write_speedpid_pos = 1;
+			}
+			else{
+			commBuf.Pos.PidSpeed_Hp.P = P;
+			commBuf.Pos.PidSpeed_Hp.P = I;
+			commBuf.Pos.PidSpeed_Hp.P = D;
+			}
+			break;
+		case LOAD_MODE:
+			if(highpressure == 0){
+			commBuf.Load.PidSpeed.P = P;
+			commBuf.Load.PidSpeed.P = I;
+			commBuf.Load.PidSpeed.P = D;
+			//leave it there for now ,and then change it to loopctrl
+			Loadallctrlpara.SpeedPid.P = P;
+			Loadallctrlpara.SpeedPid.I = I;
+			Loadallctrlpara.SpeedPid.D = D;
+			mySemaphore.mram.write_speedpid_load = 1;
+			}
+			else{
+			commBuf.Load.PidSpeed_Hp.P = P;
+			commBuf.Load.PidSpeed_Hp.P = I;
+			commBuf.Load.PidSpeed_Hp.P = D;
+			}
+			break;
+		case EXTEN_MODE:
+			if(highpressure == 0){
+			commBuf.Ext.PidSpeed.P = P;
+			commBuf.Ext.PidSpeed.P = I;
+			commBuf.Ext.PidSpeed.P = D;
+			//leave it there for now ,and then change it to loopctrl
+			Extallctrlpara.SpeedPid.P = P;
+			Extallctrlpara.SpeedPid.I = I;
+			Extallctrlpara.SpeedPid.D = D;
+			mySemaphore.mram.write_speedpid_ext = 1;
+			}
+			else{
+			commBuf.Ext.PidSpeed_Hp.P = P;
+			commBuf.Ext.PidSpeed_Hp.P = I;
+			commBuf.Ext.PidSpeed_Hp.P = D;
+			}
+			break;
+		default:break;
+	}
+	
+	//互斥信号量保护控制状态更新
+	xSemaphoreTake(Controller_statusMutexHandle,portMAX_DELAY);
+	{
+	controllerStatus.CTRL_HALT = 0;
+	controllerStatus.CTRL_DOWN = 0;
+	controllerStatus.CTRL_UP   = 0;
+	controllerStatus.CTRL_MOVE = 1;
+	controllerStatus.CTRL_READY =1;
+	controllerStatus.CTRL_FREE = 0;
+	controllerStatus.CTRL_INIT_E = 0;
+	controllerStatus.CTRL_SFTSET = 0;
+	controllerStatus.CTRL_SYNCINPUT = 0;
+	controllerStatus.CTRL_SYNCHWAIT = 0;
+	controllerStatus.CTRL_SLAVE = 0;
+	controllerStatus.CTRL_E_ACTIVE =0;
+	}	
+	xSemaphoreGive(Controller_statusMutexHandle);
+	
+	printf("Command=0x%2x DOPEWRSPEEDPID\t\r\n",commBuf.Command);
+	printf("MoveCtrl=%d\t\r\n",movectrl);
+	printf("Highpressure=%d\t\r\n",highpressure);
+	printf("P=%f\t\r\n",P);
+	printf("I=%f\t\r\n",I);
+	printf("D=%f\t\r\n",D);
+}
+void DOPEFEEDFORWARD_Process(void)//设置速度前馈参数指令
+{
+	uint8_t movectrl=0,i=5;
+	float FFP=0;
+	uint32_t Delay=0,temp=0;
+	movectrl = buf_data_save[i++];
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	FFP = *((float*)(&temp));temp=0;
+	temp += (buf_data_save[i++]<<24);temp += (buf_data_save[i++]<<16);temp += (buf_data_save[i++]<<8);temp += (buf_data_save[i++]);
+	Delay = temp;temp=0;
+	switch(movectrl)
+	{
+		case POS_MODE:	
+					commBuf.Pos.Ffd.SpeedFFP = FFP;
+					commBuf.Pos.Ffd.PosDelay = Delay;
+		//测试用
+					Posallctrlpara.Ffd.SpeedFFP = commBuf.Pos.Ffd.SpeedFFP;
+					Posallctrlpara.Ffd.PosDelay = commBuf.Pos.Ffd.PosDelay;
+		break;
+		case LOAD_MODE:  
+					commBuf.Load.Ffd.SpeedFFP = FFP;
+					commBuf.Load.Ffd.PosDelay = Delay;
+		//测试用
+					Loadallctrlpara.Ffd.SpeedFFP = commBuf.Pos.Ffd.SpeedFFP;
+					Loadallctrlpara.Ffd.PosDelay = commBuf.Pos.Ffd.PosDelay;
+		break;
+		case EXTEN_MODE:	
+					commBuf.Ext.Ffd.SpeedFFP = FFP;
+					commBuf.Ext.Ffd.PosDelay = Delay;
+		//测试用
+					Extallctrlpara.Ffd.SpeedFFP = commBuf.Pos.Ffd.SpeedFFP;
+					Extallctrlpara.Ffd.PosDelay = commBuf.Pos.Ffd.PosDelay;
+		break;
+		default:break;
+	}
+	
+	printf("Command=0x%2x DOPEFEEDFORWARD\t\r\n",commBuf.Command);
+	printf("MoveCtrl=%d\t\r\n",movectrl);
+	printf("FFP=%f\t\r\n",FFP);
+	printf("Delay=%d\t\r\n",Delay);
+}
+

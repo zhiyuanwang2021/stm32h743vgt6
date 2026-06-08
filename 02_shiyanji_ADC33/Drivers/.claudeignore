@@ -1,0 +1,25 @@
+# Compiled files
+*.o
+*.crf
+*.d
+*.axf
+*.hex
+*.bin
+*.elf
+*.map
+*.lst
+*.htm
+*.dep
+*.lnp
+*.sct
+
+# IDE / 工程文件
+.vscode/**
+*.ioc
+*.mxproject
+*.uvprojx
+*.uvoptx
+
+# 库（非常关键，大幅提速）
+STM32H7xx_HAL_Driver/**
+CMSIS/**

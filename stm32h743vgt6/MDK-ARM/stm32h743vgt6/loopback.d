@@ -1,0 +1,11 @@
+stm32h743vgt6\loopback.o: ..\Ethenet\loopback.c
+stm32h743vgt6\loopback.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+stm32h743vgt6\loopback.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+stm32h743vgt6\loopback.o: ..\Ethenet\loopback.h
+stm32h743vgt6\loopback.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+stm32h743vgt6\loopback.o: ..\Ethenet\socket.h
+stm32h743vgt6\loopback.o: ..\Ethenet\wizchip_conf.h
+stm32h743vgt6\loopback.o: ..\Ethenet\W5500/w5500.h
+stm32h743vgt6\loopback.o: ../Ethenet/wizchip_conf.h
+stm32h743vgt6\loopback.o: ../Host/gParameter.h
+stm32h743vgt6\loopback.o: ../Host/posGenerator.h

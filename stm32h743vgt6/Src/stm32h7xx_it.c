@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2023 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -63,6 +63,7 @@ extern UART_HandleTypeDef huart2;
 extern TIM_HandleTypeDef htim7;
 
 /* USER CODE BEGIN EV */
+extern TIM_HandleTypeDef htim6;
 
 /* USER CODE END EV */
 
@@ -78,7 +79,7 @@ void NMI_Handler(void)
 
   /* USER CODE END NonMaskableInt_IRQn 0 */
   /* USER CODE BEGIN NonMaskableInt_IRQn 1 */
-   while (1)
+  while (1)
   {
   }
   /* USER CODE END NonMaskableInt_IRQn 1 */
@@ -214,6 +215,7 @@ void TIM7_IRQHandler(void)
   /* USER CODE BEGIN TIM7_IRQn 0 */
 
   /* USER CODE END TIM7_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim7);
   /* USER CODE BEGIN TIM7_IRQn 1 */
 
   /* USER CODE END TIM7_IRQn 1 */

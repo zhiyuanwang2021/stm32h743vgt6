@@ -79,7 +79,7 @@
           <AfterMake>
             <RunUserProg1>1</RunUserProg1>
             <RunUserProg2>1</RunUserProg2>
-            <UserProg1Name>fromelf  --bin  --output=shiyanji_H7.bin  shiyanji_H7\shiyanji_H7.axf</UserProg1Name>
+            <UserProg1Name>"$K\ARM\ARMCC\bin\fromelf.exe" --bin --output="$P@L.bin" "#L"</UserProg1Name>
             <UserProg2Name />
             <UserProg1Dos16Mode>0</UserProg1Dos16Mode>
             <UserProg2Dos16Mode>0</UserProg2Dos16Mode>

@@ -1,0 +1,309 @@
+#include "gParameter.h"
+#include <string.h>
+//#include "in_out.h"
+StateFlag stateFlag;
+StateFlag stateFlagLast;
+uint16_t InputTAN=0;//通信指令编号
+APP_LAYER_VARIABLE_STRUCT AL;
+commBuf_t commBuf,commBufLast;
+CONTROLLER_STATUS_STRUCT controllerStatus;
+//uint16_t controller_status_WORD;
+CDATATRANS cdatatrans;
+uint8_t	cdatabuf[CDTADTRANS_NUM]={0};
+VERSION_STRUCT utc_version;
+ETH_BUF_STRUCT ethBuf;
+ALLCTRLPARA Posallctrlpara;
+ALLCTRLPARA Loadallctrlpara;
+ALLCTRLPARA Extallctrlpara;
+SENSORANALOGUEDATA SenAData;
+SENSORANALOGUEDATA SenAData2;
+SENSORHEADER SenHeader;
+enum SENSOR_CONNECTOR sensor_connector;
+SENSORDATA SenData[SENSOR_CH_NUM],SenData_combuf[SENSOR_CH_NUM],SenDatatest;
+SENSORBIGDEFORMATIONDATA SensorBigDeformationData[SENSOR_CH_NUM];
+POSEXT posext;
+OUTPUTPARA OutputPara,OutputPara_combuf;
+SYSPARA SysPara;
+MYSEMAPHORE mySemaphore;
+COM_MAP_STRUCT comMap;
+FILTER filter;
+FILTER filterSL;
+EMERGENCY_SRTUCT emerency_struct;
+SERVOPWM svPWM;
+SERVOAO svAO;
+
+extern void measureData_init(void);
+
+void parameter_default_init(void)//参数初始化
+{
+	//state_flag初始化
+	stateFlag.OpenDevice_state  =	Device_Off;
+	stateFlag.DoPE_state  =	DoPE_Off;
+	stateFlag.DoPESetCtrl = CtrlFALSE;
+	stateFlag.DynCycle_OffsetReach = 0;
+
+	stateFlag.openloop = 0;
+	
+	measureData_init();
+	AL.posCtrl.setPos=0;	//期望位置
+	AL.loadCtrl.setPos=0;	//期望力矩
+	AL.posCtrl.sign = 1;//位移方向
+	AL.loadCtrl.sign = -1;//力方向
+	AL.movectrl = 9;//默认位置模式
+	AL.movectrl_last =9 ;
+	svPWM.pos = 0;
+	svPWM.load = 0;
+	svPWM.posDeadzone = 470;
+	svPWM.loadDeadzone = 470;
+	AL.delta = 0.001f; //速度采样周期1ms
+	AL.defaultacc = 5;
+	AL.defaultdec = -5;
+	AL.defaultspeed = 10;
+	AL.defaultspeedlimit = 50;
+	
+	//AL.speed_ext = 0;
+	AL.upperlimit_phy = 1000;
+	AL.lowerlimit_phy = -1000;
+	AL.emergency_state.occur = 0;
+	AL.emergency_state.complete = 0;
+	AL.emergency_state.processing = 0;
+	AL.complete_state.flag = 1;
+	AL.posCtrl.NominalSensitive = 0.0000282462;
+	AL.loadCtrl.NominalSensitive = 2;
+
+	AL.posCtrl.sign = 1;
+	AL.loadCtrl.sign = -1;
+	AL.loadCtrl.NominalValue = 50;
+	AL.ext1Ctrl.NominalValue = 10;
+	AL.ext2Ctrl.NominalValue = 10;
+	
+	//测量数据上报周期
+	AL.SysPara.TransmitDataPeriod = 20;//ms
+	
+	//系统控制结构
+	AL.SysPara.ControllerStructure = 0x02;
+	
+	AL.openloopAO = 0;
+	
+	commBuf.openloopAO = 0;
+	
+	commBuf.SysPara.TransmitDataPeriod = AL.SysPara.TransmitDataPeriod; //20ms
+	
+	//闭环控制参数初始化
+	AL.Pos.Pid.P = 1;
+	AL.Pos.Pid.I = 0;
+	AL.Pos.Pid.D = 1;
+	
+	AL.Pos.PidSpeed.P = 0.2;
+	AL.Pos.PidSpeed.I = 0.1;
+	
+	AL.Load.Pid.P = 0.05;
+	AL.Load.Pid.I = 0;
+	AL.Load.Pid.D = 0;
+	AL.Load.DefaultAcc = 0.5;
+	AL.Load.DefaultDec = -0.5;
+	
+	AL.Ext.Pid.P = 1;
+	AL.Ext.Pid.I = 0;
+	AL.Ext.Pid.D = 0;
+	
+	AL.Pos.Ffd.SpeedFFP = 100;
+	
+	//传感器滤波初始化
+	commBuf.sensorset.SensorNo = 0;
+	commBuf.sensorset.Intgr = 10;
+	
+	//死区初始化
+	commBuf.Pos.Deadband.Deadband = 0;
+	commBuf.Pos.Deadband.PercentP = 0;
+	commBuf.Load.Deadband.Deadband = 0;
+	commBuf.Load.Deadband.PercentP = 0;
+	commBuf.Ext.Deadband.Deadband = 0;
+	commBuf.Ext.Deadband.PercentP = 0;
+	
+	//默认加/减速度初始化
+	commBuf.Pos.DefaultAcc = 5;
+	commBuf.Pos.DefaultDec = -5;
+	commBuf.Load.DefaultAcc = 5;
+	commBuf.Load.DefaultDec = -5;
+	commBuf.Ext.DefaultAcc = 5;
+	commBuf.Ext.DefaultDec = -5;
+	
+	//默认速度初始化
+	commBuf.Pos.DefaultSpeed = 10;
+	commBuf.Load.DefaultSpeed = 10;
+	commBuf.Ext.DefaultSpeed = 10;
+	
+	//高低压模式
+	commBuf.Pos.HighPressure = 0;
+	commBuf.Load.HighPressure = 0;
+	commBuf.Ext.HighPressure = 0;
+	
+	//位置闭环控制参数初始化
+	//Pos
+	commBuf.Pos.Pid.P = 1;
+	commBuf.Pos.Pid.I = 0.01;
+	commBuf.Pos.Pid.D = 0.1;
+	commBuf.Pos.Pid_Hp.P = 2;
+	commBuf.Pos.Pid_Hp.I = 0.02;
+	commBuf.Pos.Pid_Hp.D = 0.2;
+	//Load
+	commBuf.Load.Pid.P = 1;
+	commBuf.Load.Pid.I = 0.01;
+	commBuf.Load.Pid.D = 0;
+	commBuf.Load.Pid_Hp.P = 2;
+	commBuf.Load.Pid_Hp.I = 0.02;
+	commBuf.Load.Pid_Hp.D = 0;
+	//Ext
+	commBuf.Ext.Pid.P = 2;
+	commBuf.Ext.Pid.I = 0.02;
+	commBuf.Ext.Pid.D = 0.2;
+	commBuf.Ext.Pid_Hp.P = 4;
+	commBuf.Ext.Pid_Hp.I = 0.04;
+	commBuf.Ext.Pid_Hp.D = 0.4;
+	
+	//速度前馈参数初始化
+	//Pos
+	commBuf.Pos.Ffd.SpeedFFP = 0;
+	commBuf.Pos.Ffd.PosDelay = 0;
+	commBuf.Pos.Ffd_Hp.SpeedFFP = 0;
+	commBuf.Pos.Ffd_Hp.PosDelay = 0;
+	//Load
+	commBuf.Load.Ffd.SpeedFFP = 2;
+	commBuf.Load.Ffd.PosDelay = 20;
+	commBuf.Load.Ffd_Hp.SpeedFFP = 4;
+	commBuf.Load.Ffd_Hp.PosDelay = 40;
+	//Ext
+	commBuf.Ext.Ffd.SpeedFFP = 3;
+	commBuf.Ext.Ffd.PosDelay = 30;
+	commBuf.Ext.Ffd_Hp.SpeedFFP = 6;
+	commBuf.Ext.Ffd_Hp.PosDelay = 60;
+	
+	//软限位
+	commBuf.Pos.Sft.UpperSft = 1000;
+	commBuf.Pos.Sft.LowerStf = -1000;
+	commBuf.Load.Sft.UpperSft = 1000;
+	commBuf.Load.Sft.LowerStf = -1000;
+	commBuf.Ext.Sft.UpperSft = 1000;
+	commBuf.Ext.Sft.LowerStf = -1000;
+	
+	//设定目标误差/时间窗口
+	commBuf.Pos.Wnd.WndSize = 0.01;
+	commBuf.Pos.Wnd.WndTime = 50;
+	commBuf.Load.Wnd.WndSize = 1;
+	commBuf.Load.Wnd.WndTime = 50;
+	commBuf.Ext.Wnd.WndSize = 0.01;
+	commBuf.Ext.Wnd.WndTime = 50;
+	
+	//dyncycle_halttime
+	dyncycle_halttime.haltamplitude_countingflag = 0;
+	dyncycle_halttime.haltatamplitude_time = 0;
+	dyncycle_halttime.haltatamplitude_timestamp = 0;
+	dyncycle_halttime.haltatminusamplitude_counter = 0;
+	dyncycle_halttime.haltatplusamplitude_counter = 0;
+	dyncycle_halttime.wave_time = 0;
+	
+	Posallctrlpara.PosPid.P = 15;
+	Posallctrlpara.PosPid.I = 0;
+	Posallctrlpara.PosPid.D = 1;
+	Posallctrlpara.SpeedPid.P = 0;
+	Posallctrlpara.SpeedPid.I = 0;
+	Posallctrlpara.SpeedPid.D = 0;
+	Posallctrlpara.Ffd.SpeedFFP = 1;
+	Posallctrlpara.Ffd.PosDelay = 0;
+	Posallctrlpara.Wnd.WndSize = 0.002;
+	Posallctrlpara.Wnd.WndTime = 100 ;//ms
+	Posallctrlpara.Nominal.Acc = 5;
+	Posallctrlpara.Nominal.Speed = 10;
+	Posallctrlpara.DefaultAcc = 5;
+	Posallctrlpara.MaxSpeed = 50;
+	Posallctrlpara.Sft.UpperSft = 1000;
+	Posallctrlpara.Sft.LowerStf = -1000;
+	Posallctrlpara.WndExt.WndSize = 2;
+	Posallctrlpara.WndExt.WndTime = 10;
+
+	Posallctrlpara.PosExtPid.P = 0.5;
+	Posallctrlpara.PosExtPid.I = 0;
+	Posallctrlpara.PosExtPid.D = 0;
+	
+	Loadallctrlpara.PosPid.P = 2;
+	Loadallctrlpara.PosPid.I = 0;
+	Loadallctrlpara.PosPid.D = 0;
+	Loadallctrlpara.SpeedPid.P = 0;
+	Loadallctrlpara.SpeedPid.I = 0;
+	Loadallctrlpara.SpeedPid.D = 0;
+	Loadallctrlpara.Ffd.SpeedFFP = 1;
+	Loadallctrlpara.Ffd.PosDelay = 0;
+	Loadallctrlpara.Wnd.WndSize = 2 ;
+	Loadallctrlpara.Wnd.WndTime = 5 ;//ms
+	Loadallctrlpara.Nominal.Acc = 2;
+	Loadallctrlpara.Nominal.Speed = 10;
+	Loadallctrlpara.DefaultAcc = 0.5;
+	Loadallctrlpara.MaxSpeed = 2;
+	Loadallctrlpara.Sft.UpperSft = 50000;
+	Loadallctrlpara.Sft.LowerStf = -50000;
+	Loadallctrlpara.WndExt.WndSize = 20;
+	Loadallctrlpara.WndExt.WndTime = 10;
+
+	Loadallctrlpara.PosExtPid.P = 0.0001;
+	Loadallctrlpara.PosExtPid.I = 0.00005;
+	Loadallctrlpara.PosExtPid.D = 0;
+	
+	
+	svAO.pos = 0;
+	AL.openloopAO = 0;
+	
+	OutputPara.Signal = SGINAL_PULSE_SIGN;
+	OutputPara.Sign = 0x00;
+	OutputPara.MaxValue = 100;
+	OutputPara.MinValue = -100;
+	OutputPara.InitValue = 0;
+	OutputPara.Offset = 0;
+	OutputPara.SignalFrequency = 500000;
+	OutputPara.MaxVoltage = 10;//V
+	OutputPara.MaxValue = 0;//A
+	
+
+	//filter
+	memset(filter.speed_buf,0,sizeof(filter.speed_buf));
+	memset(filter.speed_buf_load,0,sizeof(filter.speed_buf_load));
+	memset(filter.force_buf,0,sizeof(filter.force_buf));
+	filter.speed_temp = 0;
+	filter.speedload_temp = 0;
+	filter.force_temp = 0;
+	
+}
+
+void sendata_default_init(void)
+{
+	SenData[ch0].Sign = 0x00;//pose
+	SenData[ch1].Sign = 0x00;//large deformation
+	SenData[ch2].Sign = 0x00;//ext1
+	SenData[ch3].Sign = 0x00;//ext2
+	SenData[ch4].Sign = 0x01;//Load
+	
+	SenData[ch0].NominalSensitive = 0.0000282462;
+	SenData[ch1].NominalSensitive = 1;
+	SenData[ch2].NominalSensitive = 1;
+	SenData[ch3].NominalSensitive = 1;
+	SenData[ch4].NominalSensitive = 2;
+}
+
+void commBufResume(commBuf_t* x,commBuf_t* x_last)
+{
+	memcpy(x,x_last,sizeof(*x));
+}
+
+void commBufSave(commBuf_t* x,commBuf_t* x_last)
+{
+	memcpy(x_last,x,sizeof(*x_last));
+}
+
+float constraint(float in,float upperlimit,float lowerlimit)
+{	
+	float out;
+	out = in;
+	if(out > upperlimit) out = upperlimit;
+	if(out < lowerlimit) out = lowerlimit;
+	return out;
+}

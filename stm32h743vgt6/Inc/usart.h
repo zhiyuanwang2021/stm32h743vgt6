@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2023 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -29,7 +29,9 @@ extern "C" {
 #include "main.h"
 
 /* USER CODE BEGIN Includes */
-
+#include <stdio.h>
+#include <string.h>
+#include "RS485.h"
 /* USER CODE END Includes */
 
 extern UART_HandleTypeDef huart1;

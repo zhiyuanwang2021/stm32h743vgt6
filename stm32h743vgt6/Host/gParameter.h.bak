@@ -1,0 +1,532 @@
+#ifndef  _GPARAMETER_H_
+#define  _GPARAMETER_H_  
+#include "w5500.h"
+#include "posGenerator.h"
+#define CDTADTRANS_NUM 200
+//55
+#ifndef PHY_LINK_OFF 
+		#define PHY_LINK_OFF 0
+#endif
+#ifndef PHY_LINK_ON 
+		#define PHY_LINK_ON 1
+#endif
+#ifndef PHY_LINK_UNKNOW
+		#define PHY_LINK_UNKNOW 2
+#endif
+
+#define	Device_Open  1
+#define Device_Off 0
+
+#define DoPE_On  1
+#define DoPE_Off 0
+#define CtrlTRUE    1
+#define CtrlFALSE	0
+
+#define TRUE  0x01
+#define FALSE 0x00
+
+#define DIRECTION_UP 0x01
+#define DIRECTION_DOWN 0x00
+typedef struct{
+	uint8_t eth_phy_state;
+	uint8_t eth_scoket_state;
+	uint8_t PC_ack_state;//�����ж�UTC��PC���紫��״̬
+	uint8_t os_start;//����ϵͳ�Ƿ�����־
+	uint8_t sys_init_ok;//ϵͳ��ʼ����ɱ�־
+	uint8_t OpenDevice_state;//������Ͽ�����״̬
+	uint8_t DoPE_state;//DoPEOn/DoPEOff  ����/ͣ�ÿ�����
+	uint8_t DoPESetCtrl;//ʹ��/��ʹ�ܱջ�����  TRUEʹ��  FALSE��ʹ��
+	uint8_t DoPETransmitData;
+	uint8_t UpperLimits;//��������λ״̬
+	uint8_t LowerLimits;//��������λ״̬
+	uint8_t restart;
+	uint8_t DynCycle_OffsetReach;//��̬ѭ��ǰ�Ƿ��offsetλ
+	uint8_t PosExt_DestReach;//Extָ�� ����Ŀ��λ�ô���λ
+}StateFlag;
+extern StateFlag state_flag;
+extern StateFlag state_flag_last;
+
+
+#define POS 				0	//λ�ÿ���
+#define LOAD				1 //���ؿ���
+#define EXTEN				2 //��չ����
+extern uint16_t InputTAN;//ͨ��ָ����
+
+typedef struct{
+	uint16_t InputTAN;
+	uint8_t  flag;
+	uint8_t  send_flag;
+}COMPLETE_STATE;
+
+#define EMERGENCY_DEVICE_OFF 		0x01//1  0B00000001
+#define EMERGENCY_DOPE_OFF 			0x02//2	 0B00000010
+#define EMERGENCY_CTRL_FALSE 		0x04//4  0B00000100
+#define EMERGENCY_PHY_OFF 			0x08//8  0B00001000
+#define EMERGENCY_SOCKET_UNESTAB	0x16//16 0B00010000
+
+typedef struct{
+	uint8_t occur;
+	uint8_t processing;
+	uint8_t complete;
+	uint8_t error;
+}EMERGENCY_STATE;
+
+
+ /* Sensor classes */
+ /* ---------------------------------- */
+#define SEN_UNDEF 			0 	/* unknown sensor class */
+#define SEN_ANALOGUE 		1 	/* analogue sensor */
+#define SEN_INC 			2 	/* incremental sensor */
+#define SEN_ABS 			3 	/* absolute value sensor */
+ /* Analogue sensor types */
+ /* ---------------------------------- */
+#define SIG_STRAINGAUGE 	0 	/* Strain gauge */
+#define SIG_LVDT 			1	/* LVDT */
+#define SIG_DC 				2 	/* DC */
+ /* Incremental sensor types */
+ /* ---------------------------------- */
+#define SIG_TTL 			0 	/* TTL Signal */
+#define SIG_LINE 			1 	/* RS422 (line driver) */
+#define SIG_SINE11uA 		2 	/* Sine 11��A */
+#define SIG_SINE1V 			3 	/* Sine 1V */
+ /* Absolute value sensor types */
+ /* ---------------------------------- */
+#define SIG_UNDEF 			0 	/* undefined */
+#define SIG_TR_LT_S 		1 	/* TR LT-S Sensor */
+/* Transducer types */
+ /* ---------------------------------- */
+#define TRANSDUCER_LINEAR 	0 	/* Linear transducer */
+#define TRANSDUCER_ROTARY 	1 	/* Rotary transducer */
+/* Reference mark types */
+ /* ---------------------------------- */
+#define REFMARK_NON 		0 	/* Transducer has no reference mark */
+#define REFMARK_ONE 		1 	/* Transducer has one reference mark */
+#define REFMARK_DISTCODE 	2 	/* Transducer has distance coded */
+
+typedef struct
+{
+	uint16_t PartNo;			//�������������
+	uint8_t  Version;			//�������汾
+	uint32_t SerNo;				//���������к�
+	uint16_t Class;				//����������
+	uint8_t  DatVersion;		//���ݰ汾
+}SENSORHEADER;
+
+extern SENSORHEADER SenHeader;
+
+typedef struct
+{
+	uint8_t CalculatedSensor;	//������Ĵ�����
+	uint8_t SENSOR_CORR_MAX;	//������У�����������ֵ  *** ��ô�����ֵ��Ϊ���鳤�ȣ�
+	uint8_t CorrNo;				//��Ч��Ŀ����  ָ�����������鱻ʵ�����ĳ���
+	float 	S1Correction[32];	//S1��У��ֵ����ӦS2��������ֵ��У��ֵ
+	uint32_t S2Value[32];		//S2��ֵ(��������������)��ADC��ֵ
+}SENSORCORRECT;
+
+typedef struct
+{
+	uint8_t 	SensorNo;		//���������
+	uint32_t 	Intgr;			//����ͨ������ʱ�䳣��
+	SENSORCORRECT Correct;		//���������ò���
+}SENSORSETPARA;					
+
+/* Analogue sensor EEPROM data */
+#define SEN_LIN_DATA_MAX 32
+
+typedef struct 
+{ 
+ float 		MaxExcitation; 		/* Maximum excitation voltage [V] �������ѹ*/
+ uint16_t 	MinImpedance; 		/* Impedance [Ohm] ��С�迹*/
+ float 		NominalValue; 		/* Nominal value of the sensor [Unit] ���������ֵ*/
+ uint16_t 	Unit; 				/* Unit of sensor UNIT_xxx [No] ��������λ*/
+ float 		Offset; 			/* Sensor offset [Unit] ������ƫ����*/
+ uint16_t 	NegLimit; 			/* Range limit - min. [%] �޷� ��Сֵ %*/
+ uint16_t 	PosLimit; 			/* Range limit - max. [%] �޷� ���ֵ %*/
+ float 		Reference; 			/* Nominal value of the reference [*] �ο�ֵ�ı��ֵ*/
+ float 		CorrReference;		/* Corr. value of the reference [No]�ο�ֵ��У��ֵ*/
+ uint16_t 	Sensortype; 		/* Sensor type ����������*/
+ float 		NominalSensitive; 	/* Sensitivity at Nominal value [*] ���������*/
+ uint16_t   GaugeLength;		/* Gauge Length [*] ����Ʊ��*/
+ uint16_t 	Sign; 				/* Invert sign of channel [1/0] ͨ���ķ��ŷ�ת*/
+ uint16_t 	Day; 				/* Date of last change [No] �ϴθ������ڵ���*/
+ uint16_t 	Month; 				/* Date of last change [No]	�ϴθ������ڵ���*/
+ uint16_t 	Year; 				/* Date of last change [No]	�ϴθ������ڵ���*/
+ uint16_t 	LinPoint; 			/* Number of linearization steps [No] ���Ի�����*/
+ struct LinVal2
+ {
+ float MeasValue; 				/* Measured value [Unit] ����ֵ*/
+ float RefValue; 				/* Reference [Unit] �ο�ֵ*/
+ } LinV2[SEN_LIN_DATA_MAX]; 		/* Linearization table ���������Ի�����*/
+}SENSORANALOGUEDATA;
+
+extern SENSORANALOGUEDATA SenAData;
+extern SENSORANALOGUEDATA SenAData2;
+
+/* sensor EEPROM data including PosSensor, LoadSensor, Extensometer*/
+#define SENSOR_CH_NUM 6 //�������ӿ�ͨ����
+#define SEN_LIN_DATA_MAX 32
+enum SENSOR_CONNECTOR{
+	ch0,
+	ch1,
+	ch2,
+	ch3,
+	ch4,
+	ch5
+};
+
+typedef struct 
+{ 
+ uint8_t    Sensortype;			/* Sensor type [No] ����������*/
+ uint8_t 	Sign; 				/* Invert sign of channel [1/0] ͨ���ķ��ŷ�ת*/
+ uint8_t 	Day; 				/* Date of last change [No] �ϴθ������ڵ���*/
+ uint8_t 	Month; 				/* Date of last change [No]	�ϴθ������ڵ���*/
+ uint8_t 	LinPoint; 			/* Number of linearization steps [No] ��Ч����*/
+ uint16_t 	Year; 				/* Date of last change [No]	�ϴθ������ڵ���*/
+ float 		NominalValue; 		/* Nominal value of the sensor [Unit] ���������ֵ*/
+ float 		NominalSensitive; 	/* Sensitivity at Nominal value [*] ���������*/
+ struct LinVal
+ {
+	float CorrectionFactor; 	/* Correction Factor У������*/
+	float RefValue; 			/* Reference �ο�ֵ*/
+	uint32_t ADCCode;			/* ADC Code ԭ��ֵ*/
+ } LinV[SEN_LIN_DATA_MAX]; 		/* Linearization table ���������Ի�����*/
+}SENSORDATA;
+
+extern enum SENSOR_CONNECTOR sensor_connector;
+extern SENSORDATA SenData[SENSOR_CH_NUM],SenDatatest;
+
+typedef struct 
+{ 
+ float 		NominalValue; 		/* Nominal value of the sensor [Unit] ���������ֵ*/
+ float 		NominalSensitive1; 	/* Sensitivity at Nominal value [*] ���������1*/
+ float 		NominalSensitive2; 	/* Sensitivity at Nominal value [*] ���������2*/
+ uint8_t	CollectType;		/* type of Collect [No] ����βɼ�����*/
+ uint16_t   Sensortype;			/* Sensor type [No] ����������*/
+ uint16_t 	Sign; 				/* Invert sign of channel [1/0] ͨ���ķ��ŷ�ת*/
+ uint16_t 	Day; 				/* Date of last change [No] �ϴθ������ڵ���*/
+ uint16_t 	Month; 				/* Date of last change [No]	�ϴθ������ڵ���*/
+ uint16_t 	Year; 				/* Date of last change [No]	�ϴθ������ڵ���*/
+ uint16_t 	LinPoint; 			/* Number of linearization steps [No] ��Ч����*/
+}SENSORBIGDEFORMATIONDATA; 
+
+extern SENSORBIGDEFORMATIONDATA SensorBigDeformationData[SENSOR_CH_NUM];
+
+typedef struct
+{
+	float P;
+	float I;
+	float D;
+}PID;
+
+typedef struct
+{
+	float SpeedFFP;
+	uint32_t PosDelay;
+}FFD;
+
+typedef struct
+{
+	float WndSize;//Ŀ�괰�ڴ�С
+	uint32_t WndTime;//Ŀ�괰��ʱ��
+}WND;
+
+typedef struct{
+    float Deadband;//��������
+	uint8_t PercentP;//Pֵ�ٷֱ�
+}DEADBAND;
+
+typedef struct{
+	float 	UpperSft;
+	float	LowerStf;
+	uint8_t Reaction;
+}SFT;//����λ
+
+typedef struct{
+	float 	DitherFrequency;
+	float	DitherAmplitude;
+}DITHER;//��������
+
+typedef struct{
+	float Acc;//��Ƽ��ٶ�
+	float Speed;//����ٶ�
+
+}NOMINALVALUE;//Nomial Acc & Speed
+
+typedef struct
+{
+    DEADBAND Deadband;//�����������
+	float DefaultAcc;//Ĭ�ϼ��ٶ�
+	float DefaultDec;//Ĭ�ϼ��ٶ�
+	float DefaultSpeed;//Ĭ������޶��ٶ�
+	//Ŀ������
+	WND Wnd;
+	//���趨
+	SFT Sft;
+	//λ�ñջ����Ʋ���
+	uint8_t HighPressure;//��ѹ��־
+	PID Pid;
+	PID Pid_Hp;
+	//�ٶȱջ����Ʋ���
+	PID PidSpeed;
+	PID PidSpeed_Hp;
+	//�ٶ�ǰ��
+	FFD Ffd;
+	FFD Ffd_Hp;
+	NOMINALVALUE Nominal;
+}SETPARA;//POS LOAD EXT�趨����
+
+typedef struct{
+	uint8_t Signal;//�ź�����
+	uint8_t Sign;  //����
+	float	MaxValue;//���ֵ �ٷֱ�Ϊ��λ������Ϊ100.0%����Ҳ���Ը���ʵ������ʵ�����
+	float 	MinValue;//��Сֵ �ٷֱ�Ϊ��λ������Ϊ-100.0%����Ҳ���Ը���ʵ������ʵ�����
+	float	InitValue;//��ֵ  ��ʼֵ���ٷֱ�Ϊ��λ
+	float   Offset;	 //��ƫ	
+	float   SignalFrequency;//�ź�Ƶ��
+	float	MaxVoltage;//����ѹ
+	float	MaxCurrent;//������
+}OUTPUTPARA;//�������
+
+extern OUTPUTPARA OutputPara;
+
+typedef struct{
+	uint16_t TransmitDataPeriod;//���������ϱ�����
+	uint8_t ControllerStructure;//�������ṹ
+}SYSPARA;//ϵͳ����
+
+extern SYSPARA SysPara;
+
+typedef struct//ͨ���˶�ָ�����������
+{
+	uint8_t pg_init_flag;//λ����������ʼ����־λ
+	uint8_t OpenDevice_state;
+	uint8_t DoPE_state;
+	uint8_t DoPESetCtrl;
+	uint8_t Command;//�˶�ָ��
+	uint8_t MoveCtrl; //�ƶ�����ģʽ
+	uint8_t Direction;//�ƶ�����
+	uint8_t LimitMode;//��λģʽ
+	uint8_t DestinationCtrl;//Ŀ��λ�ÿ�����ʽ
+	uint8_t DestinationMode;//Ŀ�����ģʽ
+	uint8_t Cycles;			//ָ��ѭ������
+	uint8_t DO;				//DO������
+	uint8_t OpenLoopflag;	//��������ָ���־λ
+	uint8_t Connector;		//�������ӿں�
+	uint32_t DataTransmitPeriod;//�������ݴ�������ʱ��
+	uint32_t ServoOpenloopFrq;//�ŷ��������ֵ -200000~200000
+	float Speed;			//�ٶ�
+	float Speed1;
+	float Speed2;
+	float Destination;//Ŀ��λ��
+	float Destination1;
+	float Destination2;
+	float Acc;					//���ٶ�
+	float Dec;					//���ٶ�
+	float Limit;				//��λֵ
+	float Halt1;        //��ͣʱ��1
+	float Halt2;				//��ͣʱ��2
+	float HydraulicOpenloopDAC;//Һѹ����DAC���ֵ -100%~100%
+	//�������˲�ʱ��
+	SENSORSETPARA sensorset;
+	//Pos Load Ext ���ò���
+	SETPARA Pos;
+	SETPARA Load;
+	SETPARA Ext;
+	PGDYN pgdyn;
+	NOMINALVALUE Nominal;//��Ʋ���
+	OUTPUTPARA OutputPara;//�������
+	SYSPARA SysPara;//ϵͳ����
+}MOVEPARA_BUF;//�ƶ�ָ������ṹ�建����
+
+extern MOVEPARA_BUF movepara_buf,movepara_buf_last;
+
+typedef struct{
+uint8_t EthMode;
+uint8_t ServerIp[4];
+uint16_t ServerPort;
+uint8_t	LocalIp[4];
+uint8_t LocalMac[6];
+}ETH_BUF;//��̫���������û�����
+
+extern ETH_BUF eth_buf;
+
+typedef struct{//������״̬ �ṹ��
+	uint8_t CTRL_HALT;								//��
+	uint8_t CTRL_DOWN;
+	uint8_t CTRL_UP;
+	uint8_t CTRL_MOVE;
+	uint8_t CTRL_READY;
+	uint8_t CTRL_FREE;
+	uint8_t CTRL_INIT_E;
+	uint8_t CTRL_SFTSET;
+	uint8_t CTRL_SYNCINPUT;
+	uint8_t CTRL_SYNCHWAIT;
+	uint8_t CTRL_SLAVE;
+	uint8_t CTRL_E_ACTIVE;						//��
+}CONTROLLER_STATUS;
+
+extern CONTROLLER_STATUS controller_status;
+//extern uint16_t controller_status_WORD;
+
+typedef struct{//�ϱ�����	�ṹ��  //ע���С������
+	float Position;
+	float Load;
+	float Extensometer1;
+	float Extensometer2;
+	uint16_t ManualBox;//�ֿغ�
+	uint16_t InSignals;
+	uint16_t OutSignals;
+	uint16_t CtrlState1;
+	uint8_t  CtrlState2;
+	uint8_t	 UpperLimits_state;
+	uint8_t  LowerLimits_state;
+	uint8_t	 SensorConnected;
+	uint8_t  SensorKeyPressed;
+	uint32_t ModuleError;
+	float    PosSpeed;
+	float    LoadSpeed;
+	float    Extensometer1Speed;
+	float    Extensometer2Speed;
+	uint32_t PosEncoderCode;//Pos������ԭ��
+	uint32_t LoadADCCode;//LOADԭ��
+	uint32_t Extension1ADCCode;
+	uint32_t Extension2ADCCode;
+	float pgst;
+	float pgLoadst;
+}CDATATRANS;
+
+extern CDATATRANS cdatatrans;
+extern uint8_t	cdatabuf[CDTADTRANS_NUM];
+
+typedef struct{
+	uint32_t PeInterface[6];
+	uint32_t Application[13];
+	uint32_t Subsy[6];
+	uint32_t SubsyCustVer[6];
+	uint32_t SubsyCustName[9];
+	uint32_t Bios[6];
+	uint32_t HwCtrl[7];
+	uint32_t PeInterfacePC[6];
+	uint32_t DpxVer[6];
+	uint32_t SerialNumber[17];
+	uint8_t VersionEnd;
+}VERSION_STRUCT;
+
+extern VERSION_STRUCT utc_version;
+
+typedef struct{
+	PID PosPid;
+	PID PosPid_Hp;//λ��PID��ѹģʽ����  �����п��Ʋ���ʱ������
+	PID SpeedPid;
+	PID SpeedPid_Hp;
+	FFD Ffd;
+	FFD Ffd_Hp;//�ٶ�ǰ����ѹģʽ����  �����п��Ʋ���ʱ������
+	float DefaultAcc;//Ĭ�ϼ��ٶ�
+	float Speed;//�ٶ�����
+	float Deviation;//���ƫ��
+	uint8_t DevReaction;//��ƫ��Ӧ
+	WND Wnd;//Ŀ�괰�ڡ�ʱ��
+	SFT Sft;//����λ
+	float MinAcceleration;//��С���ٶ�
+	float MaxAcceleration;//�����ٶ�
+	float MinDeceleration;//��С���ٶ�
+	float MaxDeceleration;//�����ٶ�
+	float MinSpeed;//��С�ٶ�
+	float MaxSpeed;//����ٶ�
+	DEADBAND Deadband;//�����������
+	DITHER Dither;//��������
+	NOMINALVALUE Nominal;//���ֵ Acc & Speed
+}ALLCTRLPARA;
+
+extern ALLCTRLPARA Posallctrlpara;
+extern ALLCTRLPARA Loadallctrlpara;
+extern ALLCTRLPARA Extallctrlpara;
+
+#define DEST_APPROACH	0x00
+#define DEST_POSITION	0x01
+#define DEST_MAINTAIN	0x02
+
+typedef struct{
+	uint8_t limitmode;
+	uint8_t destinationctrl;
+	uint8_t destinationmode;
+	float limit;
+}POSEXT;
+extern POSEXT posext;
+
+
+typedef struct//����״̬����
+{
+	uint8_t 	boardID;//0 1#�壬1 2#��
+	uint8_t   	command;//�ƶ�ָ��
+	uint8_t 	movectrl;//����ģʽ00������01λ�ñջ���2ѹ������bar��3������KN
+	uint8_t 	movectrl_last;
+//	uint8_t   	limitmode;//��λģʽ
+//	uint8_t   	destinationctrl;//Ŀ��λ�ÿ�����ʽ
+//	uint8_t   	destinationmode;//Ŀ�����ģʽ
+	uint8_t 	enable;//1�����������0������ʧЧ�����0
+	uint8_t     halt_flag;//��ͣʱ���־λ
+	int32_t 	PWM0;//�ŷ�ϵͳ���PWM
+	uint16_t 	PWM0_deadzone;//�ŷ�ϵͳ����
+	int32_t 	PWM1;//�ŷ�ϵͳ���PWM
+	uint16_t 	PWM1_deadzone;//�ŷ�ϵͳ����
+	int32_t 	AO0;//ģ�������AO0
+	int32_t 	AO1;//ģ�������AO1
+	int32_t 	AO2;//ģ�������AO2
+	float distance_scale;//������һ�������߶���mm  mm/����
+	float force_scale;//���תһȦ�������N��
+	float Servo_output;
+	float pose;//��ȥ��λ���ʵ��λ��
+	float force;//��ȥ��λ���ʵ����
+	float posloopctrlout_pos;//λ�û����ֵ
+	float posloopctrlout_load;//λ�û����ֵ
+	float posloopctrlout_ext;//λ�û����ֵ
+	float speedloopctrlout_pos;//�ٶȻ������ֵ
+	float speedloopctrlout_load;//�ٶȻ������ֵ
+	float speedloopctrlout_ext;//�ٶȻ������ֵ
+	float speed_pos;//ʵʱ�ٶ�
+	float speed_load;//ʵʱ�ٶ�
+	float speed_ext;//ʵʱ�ٶ�
+	float pgspeed_pos;//��ǰ�滮�ٶ�
+	float pgspeed_load;//��ǰ�滮�ٶ�
+	float pgspeed_ext;//��ǰ�滮�ٶ�
+	float delta;//�ٶȲ������� ��λs
+	float setPos;//�趨λ�� 
+	float setLoad;//�趨��
+	float openLoopValue;//%
+	float defaultacc; //Ĭ�������ٶ�
+	float defaultdec; //Ĭ�������ٶ�
+	float defaultspeed; //Ĭ���ٶ�
+	float defaultspeedlimit; //Ĭ������޶��ٶ�
+	float limit;//��λֵ
+	float halt;//��ͣʱ��
+	float upperlimit_phy;//�ϲ�������λ
+	float lowerlimit_phy;//�²�������λ
+	COMPLETE_STATE complete_state;//��ɶȼ��ṹ��
+	EMERGENCY_STATE emergency_state;//�������״̬�ṹ��
+	//Pos Load Ext ���ò���
+	SETPARA Pos;
+	SETPARA Load;
+	SETPARA Ext;
+	//WND Ŀ�괰�ڼ�ʱ��
+	uint32_t wnd_timer;
+	//���������ϱ�����
+	volatile uint16_t DataTransmitPeriod;
+	//ԭ��ֵ
+	int32_t PosEncoderCode;//Pos������ԭ��
+	uint32_t LoadADCCode;//LOADԭ��
+	uint32_t Extension1ADCCode;
+	uint32_t Extension2ADCCode;
+	uint32_t ServoOpenloopFrq;//Һѹ����DAC���ֵ -200000~200000
+	float HydraulicOpenloopDAC;//Һѹ����DAC���ֵ -100%~100%
+	uint8_t DO;				//DO������
+	SYSPARA SysPara;//ϵͳ����
+}WORK_STATE;
+extern WORK_STATE ws;
+
+void Parameter_Init(void);//������ʼ��
+void movepara_buf_resume(MOVEPARA_BUF* x,MOVEPARA_BUF* x_last);
+void movepara_buf_save(MOVEPARA_BUF* x,MOVEPARA_BUF* x_last);
+float constraint(float in,float upperlimit,float lowerlimit);
+#endif
+

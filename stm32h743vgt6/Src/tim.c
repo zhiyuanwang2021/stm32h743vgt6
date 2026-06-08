@@ -7,7 +7,7 @@
   ******************************************************************************
   * @attention
   *
-  * Copyright (c) 2026 STMicroelectronics.
+  * Copyright (c) 2023 STMicroelectronics.
   * All rights reserved.
   *
   * This software is licensed under terms that can be found in the LICENSE file
@@ -21,7 +21,15 @@
 #include "tim.h"
 
 /* USER CODE BEGIN 0 */
-
+volatile unsigned long FreeRTOSRunTimeTicks=0;
+void configureTimerForRunTimeStats(void){
+	FreeRTOSRunTimeTicks= 0;
+	MX_TIM17_Init();
+  HAL_TIM_Base_Start_IT(&htim17);
+}
+unsigned long getRunTimeCounterValue(void){
+  return FreeRTOSRunTimeTicks;
+}
 /* USER CODE END 0 */
 
 TIM_HandleTypeDef htim1;
@@ -238,9 +246,9 @@ void MX_TIM6_Init(void)
 
   /* USER CODE END TIM6_Init 1 */
   htim6.Instance = TIM6;
-  htim6.Init.Prescaler = 200-1;
+  htim6.Init.Prescaler = 1000-1;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 300-1;
+  htim6.Init.Period = 70-1;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -611,9 +619,11 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* tim_baseHandle)
     __HAL_RCC_TIM6_CLK_ENABLE();
 
     /* TIM6 interrupt Init */
-    HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 5, 0);
+    HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 4, 0);
     HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
   /* USER CODE BEGIN TIM6_MspInit 1 */
+    // HAL_NVIC_SetPriority(TIM6_DAC_IRQn, 5, 0);
+    // HAL_NVIC_EnableIRQ(TIM6_DAC_IRQn);
 
   /* USER CODE END TIM6_MspInit 1 */
   }
@@ -849,6 +859,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* tim_baseHandle)
     /* TIM6 interrupt Deinit */
     HAL_NVIC_DisableIRQ(TIM6_DAC_IRQn);
   /* USER CODE BEGIN TIM6_MspDeInit 1 */
+    HAL_NVIC_DisableIRQ(TIM6_DAC_IRQn);
 
   /* USER CODE END TIM6_MspDeInit 1 */
   }

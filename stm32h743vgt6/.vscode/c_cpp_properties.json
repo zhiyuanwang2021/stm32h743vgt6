@@ -1,0 +1,59 @@
+{
+    "configurations": [
+        {
+            "name": "Keil-H743",
+            "compilerPath": "D:/soft/mingw64/bin/gcc.exe",
+            "forcedInclude": [
+                "${workspaceFolder}/stm32h743vgt6/Drivers/CMSIS/Device/ST/STM32H7xx/Include/stm32h743xx.h",
+                "${workspaceFolder}/stm32h743vgt6/Inc/stm32h7xx_hal_conf.h"
+            ],
+            "includePath": [
+                "${workspaceFolder}/stm32h743vgt6/Inc",
+                "${workspaceFolder}/stm32h743vgt6/Drivers/STM32H7xx_HAL_Driver/Inc",
+                "${workspaceFolder}/stm32h743vgt6/Drivers/STM32H7xx_HAL_Driver/Inc/Legacy",
+                "${workspaceFolder}/stm32h743vgt6/Drivers/CMSIS/Device/ST/STM32H7xx/Include",
+                "${workspaceFolder}/stm32h743vgt6/Drivers/CMSIS/Include",
+                "${workspaceFolder}/stm32h743vgt6/Middlewares/Third_Party/FreeRTOS/Source/include",
+                "${workspaceFolder}/stm32h743vgt6/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS",
+                "${workspaceFolder}/stm32h743vgt6/Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F",
+                "${workspaceFolder}/stm32h743vgt6/Host",
+                "${workspaceFolder}/stm32h743vgt6/Hardware",
+                "${workspaceFolder}/stm32h743vgt6/Hardware/MRAM",
+                "${workspaceFolder}/stm32h743vgt6/Ethenet",
+                "${workspaceFolder}/stm32h743vgt6/Ethenet/W5500",
+                "${workspaceFolder}/stm32h743vgt6/Ethenet/bsp",
+                "${workspaceFolder}/stm32h743vgt6/ADRC",
+                "${workspaceFolder}/stm32h743vgt6/Regression",
+                "${workspaceFolder}/stm32h743vgt6/PID",
+                "${workspaceFolder}/stm32h743vgt6/Easylogger/inc",
+                "${workspaceFolder}/stm32h743vgt6/ModbusLib/include"
+            ],
+            "defines": [
+                "USE_HAL_DRIVER",
+                "STM32H743xx",
+                "USE_PWR_LDO_SUPPLY",
+                "_RTE_"
+            ],
+            "cStandard": "c99",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "windows-gcc-x64",
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/stm32h743vgt6/Inc",
+                    "${workspaceFolder}/stm32h743vgt6/Drivers",
+                    "${workspaceFolder}/stm32h743vgt6/Middlewares",
+                    "${workspaceFolder}/stm32h743vgt6/Host",
+                    "${workspaceFolder}/stm32h743vgt6/Hardware",
+                    "${workspaceFolder}/stm32h743vgt6/Ethenet",
+                    "${workspaceFolder}/stm32h743vgt6/ADRC",
+                    "${workspaceFolder}/stm32h743vgt6/Regression",
+                    "${workspaceFolder}/stm32h743vgt6/PID",
+                    "${workspaceFolder}/stm32h743vgt6/Easylogger",
+                    "${workspaceFolder}/stm32h743vgt6/ModbusLib"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,9 @@
+stm32h743vgt6\elog.o: ..\Easylogger\src\elog.c
+stm32h743vgt6\elog.o: ../Easylogger/inc/elog.h
+stm32h743vgt6\elog.o: ../Easylogger/inc/elog_cfg.h
+stm32h743vgt6\elog.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+stm32h743vgt6\elog.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+stm32h743vgt6\elog.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdbool.h
+stm32h743vgt6\elog.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+stm32h743vgt6\elog.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdarg.h
+stm32h743vgt6\elog.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h

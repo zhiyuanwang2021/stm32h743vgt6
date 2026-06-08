@@ -1,0 +1,82 @@
+#ifndef _DI_H_
+#define _DI_H_
+#include "gpio.h"
+#include "stdint.h"
+
+#define USE_DB9_CON 0 //1:使用DB9 CON 0:不使用DB9 CON
+
+typedef struct{
+    GPIO_PinState value;//out
+    uint8_t stateMachine;
+    uint32_t timRecord;
+    uint32_t timRecordYesPress;
+    uint32_t timRecordNoPress;
+    uint32_t pressTime;//out
+    uint32_t unpressTime;//out
+}DI_DETECT_STRUCT;
+
+typedef struct{
+    GPIO_PinState value;
+    uint32_t timPress;
+    uint32_t timUnPress;
+}PINSTATE_MAP_STRUCT;
+
+typedef struct{
+DI_DETECT_STRUCT DI1;
+DI_DETECT_STRUCT DI2;
+DI_DETECT_STRUCT DI3;
+DI_DETECT_STRUCT DI4;
+DI_DETECT_STRUCT DI5;
+DI_DETECT_STRUCT DI6;
+DI_DETECT_STRUCT DI7;
+DI_DETECT_STRUCT DI8;
+DI_DETECT_STRUCT DI9;
+DI_DETECT_STRUCT DI10;
+DI_DETECT_STRUCT ALM;
+uint16_t ALL;//  x|x|x|x   x|11|10|9   8|7|6|5   4|3|2|1
+}HAL_DI_STRUCT;
+
+typedef struct{
+DI_DETECT_STRUCT CON1;
+DI_DETECT_STRUCT CON2;
+DI_DETECT_STRUCT CON3;
+DI_DETECT_STRUCT ADJ1;
+DI_DETECT_STRUCT ADJ2;
+DI_DETECT_STRUCT ADJ3;
+uint16_t ALL;
+}HAL_DB9_STRUCT;
+
+typedef struct{
+uint16_t ALL;//  x|x|x|x   x|11|10|9   8|7|6|5   4|3|2|1
+PINSTATE_MAP_STRUCT DI1;
+PINSTATE_MAP_STRUCT DI2;
+PINSTATE_MAP_STRUCT DI3;
+PINSTATE_MAP_STRUCT DI4;
+PINSTATE_MAP_STRUCT DI5;
+PINSTATE_MAP_STRUCT DI6;
+PINSTATE_MAP_STRUCT DI7;
+PINSTATE_MAP_STRUCT DI8;
+PINSTATE_MAP_STRUCT DI9;
+PINSTATE_MAP_STRUCT DI10;
+PINSTATE_MAP_STRUCT ALM;
+}DITypeDef;
+
+typedef struct{
+uint8_t ALL;//   x|x|6|5   4|3|2|1
+PINSTATE_MAP_STRUCT CON1;
+PINSTATE_MAP_STRUCT CON2;
+PINSTATE_MAP_STRUCT CON3;
+PINSTATE_MAP_STRUCT ADJ1;
+PINSTATE_MAP_STRUCT ADJ2;
+PINSTATE_MAP_STRUCT ADJ3;
+}DB9Typedef;
+extern HAL_DI_STRUCT halDI;
+extern DITypeDef DI;
+extern HAL_DB9_STRUCT halDB9;
+extern DB9Typedef DB9;
+
+void DIDetect_ReadALL(void);
+void DB9Detect_ReadALL(void);
+GPIO_PinState DIDetect(GPIO_PinState PinState,DI_DETECT_STRUCT* x,GPIO_PinState PinStatePress);
+#endif
+

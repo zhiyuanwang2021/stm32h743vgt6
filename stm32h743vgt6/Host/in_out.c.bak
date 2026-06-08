@@ -1,0 +1,787 @@
+#include "in_out.h"
+#include "DI.h"
+#include "DO.h"
+#include "usart.h"
+#include "ADS1274.h"
+#include "cmsis_os.h"
+#include "Servo_driver.h"
+#include "DAC8831.h"
+#include "Encoder.h"
+#include "control.h"
+#include "gParameter.h"
+#include "communicate.h"
+#include "posGenerator.h"
+#include "sensor.h"
+#include "td.h"
+#include "lsm.h"
+#include <elog.h>
+
+HAL_OUTPUT hal_output;
+DOTypeDef openloopDO;
+MDSTRUCT pose;
+MDSTRUCT speedPose;
+MDSTRUCT force;
+MDSTRUCT forceSL;
+MDSTRUCT speedForce;
+MDSTRUCT strain1;
+MDSTRUCT strain2;
+DIMAPSTRUCT DIMap_init[10];
+DIMAPSTRUCT DIMap[10];
+
+void SetTareMonitor(APP_LAYER_VARIABLE_STRUCT *p);//传感器值清零检测
+void output_param_update(void);//输出参数更新
+void output_switch(OUTPUTPARA* op);//output switch
+void output_switch_openloop(OUTPUTPARA* op);//output switch openloop
+void pose_calculate(void);
+void posespeed_filter(uint8_t filter_depth);
+void load_calculate(MDSTRUCT* force,APP_LAYER_VARIABLE_STRUCT* AL);
+void load_filter(uint16_t filter_depth);
+void load_filter_SL(uint16_t filter_depth);
+void load_lsm_filter(uint8_t filter_depth);
+void loadspeed_filter(uint8_t filter_depth);
+void sendata_pg_process(void);
+void openloop_parameters_update(void);
+void openloopOutputMap(OUTPUTPARA* op);
+void closeloopOutputMap(OUTPUTPARA* op);
+void emergency_scram_button_process(void);
+void DI_map(HAL_DI_STRUCT* x);
+void DB9_map(HAL_DB9_STRUCT* x);
+void ServoIO_map(HAL_DI_STRUCT* x);
+void MD_CODE_map(ADS1274_PAR *par,ENCODER_STRUCT *encdr,uint8_t SensorMapNum[3]);
+/*DI Function map*/
+void DIFuncMap_init(void);
+void DIFunc_map(void);
+
+
+void inputGetValue()
+{
+	//Encoder
+	Encoder_Get(Encoder0,&encoder);
+	//AI 在外部中断中获取
+	ADS1274_Data_Process(&ads1274_par);
+	//DI
+	DIDetect_ReadALL();
+	//DB9
+	DB9Detect_ReadALL();
+
+}
+
+void inputMapping()
+{
+	uint32_t ls_filter_len = 50;
+	//DI ordinary IO mapping 
+	DI_map(&halDI);
+	//DI function map
+	//DIMap[1].func(DI.DI2);
+	//Servo mapping
+	ServoIO_map(&halDI);
+	//DB9 ordinary IO mapping 
+	DB9_map(&halDB9);
+	//CON ADJ monitor
+	sensorCON_ADJ_Monitor(&DB9);
+	//measure data code value mapping
+	MD_CODE_map(&ads1274_par,&encoder,sensorCheck.MapNum);
+	//sensor settare monitor
+	SetTareMonitor(&AL);
+	//pose calculate
+	pose_calculate();
+	//pose speed filter
+	posespeed_filter(5);
+	//load calculate
+	load_calculate(&force,&AL);
+	//load filter
+	load_lsm_filter(ls_filter_len);
+
+	fliterLen.Len = sigmodLen(3,(double)(ls_slide_t.k/10.0),FILTER_LEN);
+	load_filter_SL(fliterLen.Len); 
+	/**************************************************************************************************
+	//load_filter(1); 
+	//load speed filter
+	//loadspeed_filter(10);
+	//x-pos y-load least square fast method
+	//ls_slide_t.x_m = mean_fast(ls_filter_len,&ls_slide_t.i_xm,&ls_slide_t.x_mtemp,ls_slide_t.x_mbuf,++ls_slide_t.n);
+	***************************************************************************************************/
+	//pos generator update if sendata is updated
+	sendata_pg_process();
+
+}
+
+void outputMapping()
+{
+	//openloop mapping
+	if(stateFlag.openloop == 1) //OPENLOOP
+		openloopOutputMap(&OutputPara);
+	//closeloop maping
+	else
+		closeloopOutputMap(&OutputPara);
+	//emergency scram button process (use for testing)
+	emergency_scram_button_process();
+}
+
+void outputControl()
+{
+
+	//Pulse ouput
+	Servo_mod_fclk(PULSE,hal_output.PWM);
+	hal_output.PWM_last = hal_output.PWM;
+	//PWM start enable 
+	Servo_PWM_Enable(PULSE);
+	//DAC output
+	DAC8831_Write(hal_output.AO);
+	//SRV DIR
+	(hal_output.DO.DIR == 1) ? DIR_SET :DIR_RESET;
+	//SRV ENBALE
+	(hal_output.DO.SON == 1) ? SRV_ON :SRV_OFF;
+	
+	//SRV_ON;
+	//SRV DIR
+	// if(hal_output.PWM < 0)
+	// {
+	// 	dir = hal_output.DO >> 1;
+	// 	dir = (~dir)&0x01; 
+	// }
+	// if(dir == 1) 
+	// 	DIR_SET;
+	// else 
+	// 	DIR_RESET;
+	//Darlington
+	Darlington_Write(P_DO1_Pin,hal_output.DO.DO1);
+	Darlington_Write(P_DO2_Pin,hal_output.DO.DO2);
+	Darlington_Write(P_DO3_Pin,hal_output.DO.DO3);
+	//Relay
+	Relay_Write(P_DO4_RL_Pin,hal_output.DO.DO4_RL);
+	Relay_Write(P_DO5_RL_Pin,hal_output.DO.DO5_RL);
+}
+
+/**
+ * @brief ADC CODE map
+ * @param[in] par ADS1274 sample value 
+ * @param[in] encdr encoder struct
+*/
+void MD_CODE_map(ADS1274_PAR *par,ENCODER_STRUCT *encdr,uint8_t SensorMapNum[3]){
+	if(SensorMapNum[0] == SENSOR_NO_CHANNEL)
+		force.code 		 		= AL.tare.value[4];
+	else
+		force.code 		 		= par->value[SensorMapNum[0]];
+	if(SensorMapNum[1] == SENSOR_NO_CHANNEL) 
+		strain1.code 		 	= 0;
+	else
+		strain1.code			= par->value[SensorMapNum[1]];
+	if(SensorMapNum[2] == SENSOR_NO_CHANNEL)
+		strain2.code 		 	= 0;
+	else
+		strain2.code			= par->value[SensorMapNum[2]];
+
+	pose.code 				= encdr->count0;
+}
+
+/**
+ * @brief DI map
+ * @param[in] x hal DI 
+*/
+void DI_map(HAL_DI_STRUCT* x){
+	DI.DI2.value = x->DI2.value;
+	DI.DI2.timPress = x->DI2.pressTime;
+	DI.DI2.timUnPress = x->DI2.unpressTime;
+	DI.DI3.value = x->DI3.value;
+	DI.DI3.timPress = x->DI3.pressTime;
+	DI.DI3.timUnPress = x->DI3.unpressTime;
+	DI.DI4.value = x->DI4.value;
+	DI.DI4.timPress = x->DI4.pressTime;
+	DI.DI4.timUnPress = x->DI4.unpressTime;
+	DI.DI5.value = x->DI5.value;
+	DI.DI5.timPress = x->DI5.pressTime;
+	DI.DI5.timUnPress = x->DI5.unpressTime;
+	DI.DI6.value = x->DI6.value;
+	DI.DI6.timPress = x->DI6.pressTime;
+	DI.DI6.timUnPress = x->DI6.unpressTime;
+	DI.DI7.value = x->DI7.value;
+	DI.DI7.timPress = x->DI7.pressTime;
+	DI.DI7.timUnPress = x->DI7.unpressTime;
+	DI.DI8.value = x->DI8.value;
+	DI.DI8.timPress = x->DI8.pressTime;
+	DI.DI8.timUnPress = x->DI8.unpressTime;
+	DI.DI9.value = x->DI9.value;
+	DI.DI9.timPress = x->DI9.pressTime;
+	DI.DI9.timUnPress = x->DI9.unpressTime;
+	DI.DI10.value = x->DI10.value;
+	DI.DI10.timPress = x->DI10.pressTime;
+	DI.DI10.timUnPress = x->DI10.unpressTime;
+	DI.ALM.value = x->ALM.value;
+	DI.ALM.timPress = x->ALM.pressTime;
+	DI.ALM.timUnPress = x->ALM.unpressTime;
+	DI.ALL = x->ALL;
+	//emergency button map
+	emerency_struct.scram_button = (uint8_t)x->DI4.value;
+}
+
+/**
+ * @brief ServoIO map
+ * @param[in] x hal DI  
+*/
+void ServoIO_map(HAL_DI_STRUCT* x){
+	DI.ALM.value = x->ALM.value;
+}
+
+/**
+ * @brief DB9 IO map
+ * @param[in] x hal DIB9 IO
+*/
+void DB9_map(HAL_DB9_STRUCT* x){
+	DB9.CON1.value = x->CON1.value;
+	DB9.CON1.timPress = x->CON1.pressTime;
+	DB9.CON1.timUnPress = x->CON1.unpressTime;
+	DB9.CON2.value = x->CON2.value;
+	DB9.CON2.timPress = x->CON2.pressTime;
+	DB9.CON2.timUnPress = x->CON2.unpressTime;
+	DB9.CON3.value = x->CON3.value;
+	DB9.CON3.timPress = x->CON3.pressTime;
+	DB9.CON3.timUnPress = x->CON3.unpressTime;
+	DB9.ADJ1.value = x->ADJ1.value;
+	DB9.ADJ1.timPress = x->ADJ1.pressTime;
+	DB9.ADJ1.timUnPress = x->ADJ1.unpressTime;
+	DB9.ADJ2.value = x->ADJ2.value;
+	DB9.ADJ2.timPress = x->ADJ2.pressTime;
+	DB9.ADJ2.timUnPress = x->ADJ2.unpressTime;
+	DB9.ADJ3.value = x->ADJ3.value;
+	DB9.ADJ3.timPress = x->ADJ3.pressTime;
+	DB9.ADJ3.timUnPress = x->ADJ3.unpressTime;
+	DB9.ALL = x->ALL;
+}
+
+/**
+ * @brief	monitor if tare.flag is true,then set tare for relevant sensor
+ * @param	p type:APP_LAYER_VARIABLE_STRUCT*
+ * @retval	null
+*/
+void SetTareMonitor(APP_LAYER_VARIABLE_STRUCT *p)
+{
+	if(p->tare.flag == 1 && p->tare.connector < CONNECTOR_NUM_MAX)
+	{
+		switch(p->tare.connector)
+		{
+			case 0x00://位移
+				pose.code = 0;
+				encoder.count0 = 0;
+				__HAL_TIM_SetCounter(&htim1, 30000);
+				memset(filter.speed_buf,0,sizeof(filter.speed_buf));
+				filter.speed_temp = 0;
+				memset(&pg,0,sizeof(pg));
+			break;
+			case 0x01://大变形
+				p->tare.value[1] = 0;//保留
+			break;
+			case 0x02://引伸计
+				p->tare.value[2] = strain1.code;
+			break;
+			case 0x03://扩展1
+				p->tare.value[3] = strain2.code;
+			break;
+			case 0x04://载荷
+				p->tare.value[4] = force.code;
+				memset(filter.force_buf,0,sizeof(filter.force_buf));
+				filter.force_temp = 0;
+				memset(filter.speed_buf_load,0,sizeof(filter.speed_buf_load));
+				filter.speedload_temp = 0;
+				memset(&pgLoad,0,sizeof(pgLoad));
+			break;
+		}
+	}
+	p->tare.flag = 0;
+}
+
+/**
+ * @brief	pose calculate from Encoder
+ * @param	null
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void pose_calculate(void)
+{
+	pose.orig_last = pose.orig;
+	pose.orig = AL.posCtrl.sign*pose.code*AL.posCtrl.NominalSensitive;//calculate encoder0 movement pulse
+}
+
+/**
+ * @brief	pose speed filter
+ * @param	filter_depth type:uint8_t
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void posespeed_filter(uint8_t filter_depth)
+{
+	static uint8_t i=0;
+	speedPose.filter_last = speedPose.filter;
+	i++;
+	if(i >= filter_depth) i=0;
+	filter.speed_temp -= filter.speed_buf[i];
+	filter.speed_buf[i] = (pose.orig - pose.orig_last)/AL.delta;//计算速度 r/s
+	filter.speed_temp += filter.speed_buf[i];
+	speedPose.orig = filter.speed_buf[i];
+	speedPose.filter = filter.speed_temp/(filter_depth*1.0f);//计算速度 r/s
+}
+
+/**
+ * @brief	load calculate from ads1274
+ * @param[in]	par type:ADS1274_PAR*
+ * @param[in]	AL type:APP_LAYER_VARIABLE_STRUCT*
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void load_calculate(MDSTRUCT* force,APP_LAYER_VARIABLE_STRUCT* AL)
+{
+	// par->value_calcu[1] = AL.loadCtrl.sign*1.201226008469083e-4*(par->value[1]-AL->tare.value[4])
+	// 						/AL.loadCtrl.NominalSensitive*AL.loadCtrl.NominalValue;
+	force->orig_last = force->orig;
+	force->orig = AL->loadCtrl.sign*1.201226008469083e-4*(force->code-AL->tare.value[4])
+							/AL->loadCtrl.NominalSensitive*AL->loadCtrl.NominalValue;
+}
+
+/**
+ * @brief	load lsm filter
+ * @param	filter_depth type:uint8_t
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void load_lsm_filter(uint8_t filter_depth)
+{
+	force.filter_last = force.filter;
+	ls_slide_t.y_m = mean_fast(filter_depth,&ls_slide_t.i_ym,&ls_slide_t.y_mtemp,ls_slide_t.y_mbuf,force.orig);
+	lsm_pre_load.y_pre_last = lsm_pre_load.y_pre;
+	//printf("force.orig:%f",force.orig);
+	lsm_pre_load.y_pre = least_square_fast(filter_depth,&ls_slide_t,pose.orig,force.orig);
+	force.filter = lsm_pre_load.y_pre;
+}
+
+/**
+ * @brief	load filter
+ * @param	filter_depth type:uint16_t
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void load_filter(uint16_t filter_depth)
+{
+	static uint16_t i=0;
+	forceSL.filter_last = forceSL.filter;
+	i++;
+	if(i >= filter_depth) i=0;
+	filterSL.force_temp -=filterSL.force_buf[i];
+	filterSL.force_buf[i] = force.orig;
+	filterSL.force_temp +=filterSL.force_buf[i];
+	forceSL.filter = filterSL.force_temp/(filter_depth*1.0f); 
+}
+
+/**
+ * @brief	load filter sigmod len
+ * @param	filter_depth type:uint16_t
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void load_filter_SL(uint16_t filter_depth)
+{
+	static uint16_t i=0,depthLast=FILTER_LEN,j;
+	
+	forceSL.filter_last = forceSL.filter;
+	if(depthLast < filter_depth){ //add 
+		for(j = (i-filter_depth+1+FILTER_LEN)%FILTER_LEN;j != (i-depthLast+1+FILTER_LEN)%FILTER_LEN;){
+			filterSL.force_temp += filterSL.force_buf[j];
+			++j;
+			if(j >= FILTER_LEN) j=0;
+		}
+	}else if(depthLast > filter_depth){// sub
+		for(j = (i-depthLast+1+FILTER_LEN)%FILTER_LEN;j != (i-filter_depth+1+FILTER_LEN)%FILTER_LEN;){
+			filterSL.force_temp -= filterSL.force_buf[j];
+			++j;
+			if(j >= FILTER_LEN) j=0;
+		}
+	}
+	i++;
+	if(i >= FILTER_LEN) i=0;
+	filterSL.force_temp -=filterSL.force_buf[(i-filter_depth+FILTER_LEN)%FILTER_LEN];
+	filterSL.force_buf[i] = force.orig;
+	filterSL.force_temp +=filterSL.force_buf[i];
+	forceSL.filter = filterSL.force_temp/(filter_depth*1.0f); 
+	depthLast = filter_depth;
+}
+
+/**
+ * @brief	load speed filter
+ * @param	filter_depth type:uint8_t
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void loadspeed_filter(uint8_t filter_depth)
+{
+	static uint8_t i=0;
+	speedForce.filter_last = speedForce.filter;
+	i++;
+	if(i >= filter_depth) i=0;
+	filter.speedload_temp -= filter.speed_buf_load[i];
+	filter.speed_buf_load[i] = (force.filter - force.filter_last)/AL.delta;//计算速度 r/s
+	filter.speedload_temp += filter.speed_buf_load[i];
+	speedForce.orig = filter.speed_buf_load[i];
+	speedForce.filter = filter.speedload_temp/(filter_depth*1.0f);//计算速度 r/s
+}
+
+/**
+ * @brief	pos generator should be updated if sendata is updated
+ * @note	because the change of sendata will affect the calculation of measurement data 
+ * @param	null
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void sendata_pg_process(void)
+{
+	if(mySemaphore.comm.sendataUpdate == 1)
+	{	
+		switch(AL.movectrl)
+		{
+			case POS_MODE:
+				sendata_pg_update(&pose.orig);
+			break;
+			case LOAD_MODE:
+				sendata_pg_update(&force.filter);
+			break;
+			case EXTEN_MODE:
+				//sendata_pg_update(&pose_now);
+			break;
+		}
+		mySemaphore.comm.sendataUpdate = 0;
+	}
+}
+
+/**
+ * @brief	output parameters will sync from combuf if mySemaphore.comm.outputUpdate == 1
+ * @param	null
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void output_param_update(void)
+{
+	memcpy(&OutputPara,&OutputPara_combuf,sizeof(OutputPara_combuf));
+}
+
+/**
+ * @brief map hal DO
+ * @param[in] in mapping data of DO 
+ * @param[out] out hal data of DO
+*/
+void halDOMap(DOTypeDef* out,DOTypeDef* in){
+	out->DO1 = in->DO1;
+	out->DO2 = in->DO2;
+	out->DO3 = in->DO3;
+	out->DO4_RL = in->DO4_RL;
+	out->DO5_RL = in->DO5_RL;
+	out->SON = in->SON;
+	out->DIR = in->DIR;
+}
+
+/**
+ * @brief	open loop parameters update
+ * @param	null
+ * @retval	null
+ * @date	2024-3-5 20:11:40
+ * @author	Pan
+*/
+void openloop_parameters_update(void){
+	//The open loop flag bit is 1 to update the relevant value
+	if(commBuf.OpenLoopflag == 1){
+		AL.command = commBuf.Command;
+		//Frequency
+		AL.openloopFrq = commBuf.openloopFrq;
+		//AO
+		AL.openloopAO = commBuf.openloopAO;
+		//DO
+		openloopDO.SON = (GPIO_PinState)(commBuf.DO & 0x01);
+		openloopDO.DIR = (GPIO_PinState)((commBuf.DO >> 1) & 0x01);
+		openloopDO.DO1 = (GPIO_PinState)((commBuf.DO >> 2) & 0x01);
+		openloopDO.DO2 = (GPIO_PinState)((commBuf.DO >> 3) & 0x01);
+		openloopDO.DO3 = (GPIO_PinState)((commBuf.DO >> 4) & 0x01);
+		openloopDO.DO4_RL = (GPIO_PinState)((commBuf.DO >> 5) & 0x01);
+		openloopDO.DO5_RL = (GPIO_PinState)((commBuf.DO >> 6) & 0x01);
+		commBuf.OpenLoopflag = 0;
+	}
+	//openloop stateflag update,and openloop output reset
+	if(AL.command == DOPESETOPENLOOPCOMMAND){
+		stateFlag.openloop = 1;
+	}else if(AL.command != DOPESETOPENLOOPCOMMAND && stateFlag.openloop == 1){
+		stateFlag.openloop = 0;
+		AL.openloopFrq = 0;
+		AL.openloopAO = 0;
+		openloopDO.SON = GPIO_PIN_RESET;
+		openloopDO.DIR = GPIO_PIN_RESET;
+		openloopDO.DO1 = GPIO_PIN_RESET;
+		openloopDO.DO2 = GPIO_PIN_RESET;
+		openloopDO.DO3 = GPIO_PIN_RESET;
+		openloopDO.DO4_RL = GPIO_PIN_RESET;
+		openloopDO.DO5_RL = GPIO_PIN_RESET;
+	}
+}
+
+/**
+ * @brief	open loop output process
+ * @param[in]	op OUTPUTPARA*
+ * @retval	null
+ * @date	2024-3-6 15:09:01
+ * @author	Pan
+*/
+void openloopOutputMap(OUTPUTPARA* op)
+{
+	//map hal DO
+	halDOMap(&hal_output.DO,&openloopDO);
+	//PWM AO mapping
+	if(AL.openloopFrq >= 0){
+		hal_output.DO.DIR = openloopDO.DIR;	//方向判断  //正转
+		hal_output.PWM = AL.openloopFrq;
+	}else{
+		hal_output.DO.DIR = (GPIO_PinState)!openloopDO.DIR; //反转
+		hal_output.PWM = -AL.openloopFrq;
+	}	
+	hal_output.AO = AL.openloopAO*FILTER_LEN;
+}
+
+/**
+ * @brief	close loop control ouput process
+ * @param	op type:OUTPUTPARA*
+ * @retval	null
+ * @date	2024-3-6 15:31:10
+ * @author	Pan
+*/
+void closeloopOutputMap(OUTPUTPARA* op)
+{
+	//map hal DO
+	halDOMap(&hal_output.DO,&DO);
+	//PWM AO mapping
+	switch(op->Signal)
+	{
+		case SGINAL_A_B:
+			
+		break;
+		case SGINAL_PULSE_SIGN:
+			switch(AL.movectrl)
+			{
+				case POS_MODE:
+					if(svPWM.pos >= 0) DO.DIR = (GPIO_PinState)0;	//方向判断  //正转
+					else{svPWM.pos  *= -1;DO.DIR = (GPIO_PinState)1;}	//反转
+					hal_output.PWM = svPWM.pos;
+				break;
+				case LOAD_MODE:
+					if(svPWM.load >= 0) DO.DIR = (GPIO_PinState)0;	//方向判断  //正转
+					else{svPWM.load  *= -1;DO.DIR = (GPIO_PinState)1;}	//反转
+					hal_output.PWM = svPWM.load;
+				break;
+				case EXTEN_MODE:
+					if(svPWM.ext >= 0) DO.DIR = (GPIO_PinState)0;	//方向判断  //正转
+					else{svPWM.ext  *= -1;DO.DIR = (GPIO_PinState)1;}	//反转
+					hal_output.PWM = svPWM.ext;
+				break;
+				default:
+				break;
+			}
+			hal_output.DO.DIR = DO.DIR;
+		break;
+		case SGINAL_UP_DOWN:
+			
+		break;
+		case SGINAL_ANALOGUE:
+			switch(AL.movectrl)
+			{
+				case POS_MODE:
+					hal_output.AO = svAO.pos;
+				break;
+				case LOAD_MODE:
+					hal_output.AO = svAO.load;
+				break;
+				case EXTEN_MODE:
+					hal_output.AO = svAO.ext;
+				break;
+				default:
+				break;
+			}
+		break;
+		case SGINAL_DC_MOTOR:
+			
+		break;
+		case SGINAL_DC_LINEAR_MOTOR:
+			
+		break;
+	}
+	
+	if(	op->Sign == 0x01 ){
+		hal_output.AO *= -1; 
+		hal_output.PWM *= -1;
+	}
+
+}
+
+#define SCRAM_TRIGGER_TIME 20
+#define SCRAM_RELEASE_TIME1 3000
+#define SCRAM_RELEASE_TIME2 2000
+
+void emergency_scram_button_process(void)
+{
+	static uint16_t scram_counter=0;
+	static uint16_t scram_release_counter=0;
+	if(emerency_struct.scram_button == 0 && emerency_struct.state != 2)
+	{
+		scram_counter++;
+		if(scram_counter >= SCRAM_TRIGGER_TIME)//>=20ms
+		{
+			emerency_struct.state = 1;//stop system
+		}
+		if(scram_counter >= SCRAM_RELEASE_TIME1)//>=3000ms
+		{
+			emerency_struct.state = 2;//ready to release system
+		}
+	}
+
+	if(emerency_struct.scram_button == 1 && emerency_struct.state == 2)
+	{
+		scram_release_counter++;
+		if(scram_release_counter>=SCRAM_RELEASE_TIME2)
+		{
+			scram_release_counter=0;
+			scram_counter=0;
+			emerency_struct.state = 0;
+		}
+	}
+
+	if(emerency_struct.state == 1 || emerency_struct.state == 2)
+	{
+		svPWM.pos = 0;
+		svAO.pos = 0;
+		hal_output.PWM=0;
+		hal_output.AO=0;
+		hal_output.DO.SON = GPIO_PIN_RESET;//SRV OFF
+		memset(&pg,0,sizeof(pg));
+		memset(&pgLoad,0,sizeof(pgLoad));
+		memset(&pgdyn,0,sizeof(pgdyn));
+		AL.servoOutput=0;
+		AL.command=0;
+		AL.complete_state.flag=1;
+	}
+}
+
+/**
+ * @brief measure data init
+ * 
+*/
+void measureData_init(void){
+	pose.orig=0;		//初始位置
+
+	speedPose.filter = 0;//pos speed init
+
+	speedForce.filter = 0;//load speed init
+}
+
+/*****************************DI FUNC MAP***********************************************/
+static void DIFunction01(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction01 x:%d",x->value);
+}
+
+static void DIFunction02(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction02 x:%d",x->value);
+}
+
+static void DIFunction03(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction03 x:%d",x->value);
+}
+
+static void DIFunction04(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction04 x:%d",x->value);
+}
+
+static void DIFunction05(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction05 x:%d",x->value);
+}
+
+static void DIFunction06(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction06 x:%d",x->value);
+}
+
+static void DIFunction07(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction07 x:%d",x->value);
+}
+
+static void DIFunction08(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction08 x:%d",x->value);
+}
+
+static void DIFunction09(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction09 x:%d",x->value);
+}
+
+static void DIFunction10(PINSTATE_MAP_STRUCT * x){
+	log_i("DIFunction10 x:%d",x->value);
+}
+
+void DIFuncMap_init(void){
+	DIMap_init[0].func = &DIFunction01;
+	DIMap_init[1].func = &DIFunction02;
+	DIMap_init[2].func = &DIFunction03;
+	DIMap_init[3].func = &DIFunction04;
+	DIMap_init[4].func = &DIFunction05;
+	DIMap_init[5].func = &DIFunction06;
+	DIMap_init[6].func = &DIFunction07;
+	DIMap_init[7].func = &DIFunction08;
+	DIMap_init[8].func = &DIFunction09;
+	DIMap_init[9].func = &DIFunction10;
+
+	DIMap[0].func = DIMap_init[0].func;
+	DIMap[1].func = DIMap_init[1].func;
+	DIMap[2].func = DIMap_init[2].func;
+	DIMap[3].func = DIMap_init[3].func;
+	DIMap[4].func = DIMap_init[4].func;
+	DIMap[5].func = DIMap_init[5].func;
+	DIMap[6].func = DIMap_init[6].func;
+	DIMap[7].func = DIMap_init[7].func;
+	DIMap[8].func = DIMap_init[8].func;
+	DIMap[9].func = DIMap_init[9].func;
+}
+/**
+ * @brief according to the arry of mapNum from upper computer by ETH communication,remap the DI Function.
+ * @param mapNum new arry of DI Function map
+ * @note For example, if the upper computer sends an array sequence of "2,1,3,5,7,6,8,4,9,0",
+ * 						the DIMap[0].func = DIMap_init[2].func; // DIFunction03
+ * 						the DIMap[1].func = DIMap_init[1].func;	// DIFunction02
+ * 						the DIMap[2].func = DIMap_init[3].func; // DIFunction04
+ * 						...
+ * 						the DIMap[9].func = DIMap_init[0].func;	// DIFunction01
+*/
+static void DIFuncMap_update(uint8_t mapNum[10]){
+	uint8_t i;
+	for(i = 0; i < 10; i++){  
+		DIMap[i].func = DIMap_init[mapNum[i]].func;
+	}
+}
+
+void DIFunc_map(void){
+	//determine whether the semaphore of map function has been updated
+	if(mySemaphore.mapFunc.DISem == 1)
+		DIFuncMap_update(comMap.DImapNum);
+	//call DI Map Function
+	DIMap[0].func(&DI.DI1);
+	DIMap[1].func(&DI.DI2);
+	DIMap[2].func(&DI.DI3);
+	DIMap[3].func(&DI.DI4);
+	DIMap[4].func(&DI.DI5);
+	DIMap[5].func(&DI.DI6);
+	DIMap[6].func(&DI.DI7); 
+	DIMap[7].func(&DI.DI8);
+	DIMap[8].func(&DI.DI9);
+	DIMap[9].func(&DI.DI10);
+}
+/******************************DI FUNC MAP**********************************************/
+
+
+
+
