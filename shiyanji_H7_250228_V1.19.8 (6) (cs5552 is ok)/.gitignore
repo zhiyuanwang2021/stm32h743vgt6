@@ -1,0 +1,57 @@
+# MDK-ARM build outputs and intermediate files
+*.o
+*.d
+*.crf
+*.lst
+*.axf
+*.elf
+*.hex
+*.bin
+*.map
+*.dep
+*.lnp
+*.lib
+*.iex
+
+# MDK project build output directory in this project
+MDK-ARM/shiyanji_H7/
+
+# MDK temporary / user-specific files
+*.uvoptx
+*.uvguix*
+*.uvgui.*
+*.log
+*.log.lock
+
+# RTE and auto-generated ARMCM directories
+RTE/
+_ARMCM*/
+
+# Backup / temp files
+*.bak
+*.tmp
+*.TMP
+*~
+
+# NN test code and IAR example code
+Drivers/CMSIS/NN/NN_Lib_Tests/
+Drivers/CMSIS/NN/Examples/IAR/
+
+# VS Code temporary files, keep necessary configuration
+.vscode/*
+!.vscode/settings.json
+!.vscode/c_cpp_properties.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+MDK-ARM/.vscode/*
+!MDK-ARM/.vscode/settings.json
+!MDK-ARM/.vscode/c_cpp_properties.json
+!MDK-ARM/.vscode/extensions.json
+!MDK-ARM/.vscode/launch.json
+!MDK-ARM/.vscode/tasks.json
+
+# Documents / help files
+# *.pdf
+*.chm

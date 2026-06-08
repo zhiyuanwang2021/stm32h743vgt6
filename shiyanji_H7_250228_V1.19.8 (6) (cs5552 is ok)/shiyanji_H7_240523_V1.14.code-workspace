@@ -1,0 +1,35 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"main.h": "c",
+			"dac8831.h": "c",
+			"mram.h": "c",
+			"spi.h": "c",
+			"elog.h": "c",
+			"ads1274.h": "c",
+			"servo_driver.h": "c",
+			"encoder.h": "c",
+			"di.h": "c",
+			"do.h": "c",
+			"in_out.h": "c",
+			"control.h": "c",
+			"gparameter.h": "c",
+			"posgenerator.h": "c",
+			"w5500.h": "c",
+			"gpio.h": "c",
+			"stdint.h": "c",
+			"eeprom.h": "c",
+			"usart.h": "c",
+			"sensor.h": "c",
+			"ethprotocol.h": "c",
+			"limits": "c",
+			"*.tcc": "c",
+			"adrc.h": "c"
+		}
+	}
+}

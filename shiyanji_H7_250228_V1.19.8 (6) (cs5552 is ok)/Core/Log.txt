@@ -1,0 +1,802 @@
+version：V1.19.8
+date：2025-3-22 09:28:08
+address：济南
+content：1.测试周期内均匀发送和周期内不均匀发送的驱动器移动效果。
+todo：1.posext指令测试与完善。
+      2.计算载荷力速度
+
+version：V1.19.7
+date：2025-3-21 20:00:15
+address：济南
+content：1.加入了大变形传感器的测试，但是大变形标定和数据处理还需要完善。
+todo：1.posext指令测试与完善。
+      2.计算载荷力速度
+
+version：V1.19.6
+date：2025-3-21 10:33:23
+address：济南
+content：1.使用余数累积发实现低速均匀控制，但是P要加大，低速时候前馈在余数累积下没有效果
+todo：1.posext指令测试与完善。
+      2.计算载荷力速度
+
+version：V1.19.6
+date：2025-3-19 21:05:53
+address：济南
+content：1.将pwm输出加入RCR，与OPM，进准控制脉冲数输出
+        初始化OPM模式，当脉冲计数达到RCR后，会结束定时器
+        思路以1ms为单位，计算1ms需要输出的脉冲数 RCR = 需要输出的脉冲数 -1；
+        在下一个1ms前，计算出下1ms需要输出的脉冲数，如果不修改pcs，就先停止定时器，对计数器清零，对ARR,setcompare,RCR设置，然后重新开启定时器。
+        2.加入余数累积，确保脉冲不丢失
+        3.加入原码值去皮值
+todo：1.posext指令测试与完善。
+      2.计算载荷力速度
+
+version：V1.19.5
+date：2025-3-18 19:32:07
+address：济南
+content：1.将Load PID进行修改，通过类增量式PID替代以位移实现输出累计的效果。控制效果从原理上更加清晰，效果更加线性，更加可控。
+todo：1.posext指令测试与完善。
+      2.计算载荷力速度
+
+version：V1.19.4
+date：2025-3-18 00:27:33
+address：济南
+content：1.修改传感器清零问题。利用filterTrans值+fValue作为本次去皮值。
+todo：1.posext指令测试与完善。
+      2.计算载荷力速度
+
+version：V1.19.3
+date：2025-3-17 11:30:03
+address：济南
+content：1.测试传感器清零问题，在初始装机过程中好像有些问题。
+        2.对limitSW软限位进行了状态字赋值，需要在第二天的测试过程中发现问题时及时查看调试信息。（明天去先把软限位的参数都设置好）
+todo：1.posext指令测试与完善。
+      2.计算载荷力速度
+
+version：V1.19.2
+date：2025-3-15 15:25:28
+address：上海
+content：1.载荷环归一化
+        2.根据485消息判断手控盒类型，进行兼容性映射。
+        3.1.7.2版本上位机，修改了上位机接口测试的DI1的显示问题。
+todo：1.posext指令测试与完善。
+      2.计算载荷力速度
+
+version：V1.19.1
+date：2025-3-12 11:14:35
+address：上海
+content：1.引伸计闭环控制整理
+        2.添加了ADC错误超时重启机制，暂时放在了EepromTask中。超时阈值为1s。
+todo：
+
+version：V1.19.0
+date：2025-3-11 21:05:46
+address：上海
+content：1.进行上下位机同步系数实现(多点标定修改)。
+                ①上位机发送数据保存后，得到的校准系数统一计算斜率
+                k = 1/修改的校准系数* ADC_FACTOR_ROUND*NominalValue
+                所以其实多点保定保存下来的数据是斜率，单点的是灵敏度系数
+                ②上位机读取数据，需要先将斜率按照以下公式计算出灵敏度系数，再发送
+                x = 1/k * ADC_FACTOR_ROUND * NominalValue= 3
+todo：
+
+version：V1.18.9
+date：2025-3-10 15:05:18
+address：上海
+content：1.负载pid直接实现，不经过位置环(效果不佳)
+todo：
+
+version：V1.18.8
+date：2025-3-9 12:01:48
+address：上海
+content：1.使用原版的新CS5530，修改VREF_1,双端采样Bipolar，实现传感器实现
+todo：
+
+version：V1.18.7
+date：2025-3-4 18:00:02
+address：上海
+content：1.修改了传感器检测方法，通过eeprom识别传感器是否连接，不需要通过CON。2025-3-6 22:55:45
+        2.完成了todo 1.传感器最大值保护功能，力传感器已测试（其他待测试）。
+todo：1.需要添加力传感器、引伸计的最大值保护功能，根据校准系数后的值进行实现。也就是说在判断检测的时候要先把sign符号再乘一次。
+      2.现在可以记录是什么限位触发，通过什么方式详细表明具体传感器限位有待思考与确认。
+version：V1.18.7
+date：2025-3-4 00:09:18
+address：上海
+content：1.添加了限位保护处理函数，来保证在限位出发时，往反方向仍可以运动。
+
+version：V1.18.5CS5530
+date：2025-2-25 16:01:24
+address：上海
+content：1.移植cs5530程序
+
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+      2.不同模式下控制结构整理，引伸计没有整理、也没有测试，后续需要把引伸计的也像力传感器一样整理和测试好
+      3.需要配合上位机测试放大系数同步问题
+      4.需要配合上位机完成引伸计和扩展引伸计的测试
+      5.SetOnRuntimeError的触发业务代码，需要根据错误类型来具体设计。后续可以写好统一的触发处理接口，用于参数相关更新与信号量的设置
+
+version：V1.18.5
+date：2025-2-22 14:48:15
+address：上海
+content：1.添加hldr相关的触发业务代码（0x90已测试）
+
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+      2.不同模式下控制结构整理，引伸计没有整理、也没有测试，后续需要把引伸计的也像力传感器一样整理和测试好
+      3.需要配合上位机测试放大系数同步问题
+      4.需要配合上位机完成引伸计和扩展引伸计的测试
+      5.SetOnRuntimeError的触发业务代码，需要根据错误类型来具体设计。后续可以写好统一的触发处理接口，用于参数相关更新与信号量的设置
+
+version：V1.18.4
+date：2025-2-21 16:31:13
+address：上海
+content：1.添加hldr相关通信协议
+        2.根据0xA0上报数据记录的协议修改，进行了结构体修改、协议处理函数的修改与添加
+
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+      2.不同模式下控制结构整理，引伸计没有整理、也没有测试，后续需要把引伸计的也像力传感器一样整理和测试好
+      3.需要配合上位机测试放大系数同步问题
+      4.需要配合上位机完成引伸计和扩展引伸计的测试
+      5.hldr触发的业务代码需要在PPT上思考规划，再进行代码编写
+
+version：V1.18.3
+date：2025-2-6 21:40:28
+address：昆山
+content：1.位移、载荷、引伸计、扩展引伸计单点标定（主要工作是配合上位机完成上下机同步传感器放大系数测试）
+         2.传感器多点标定（引伸计和扩展引伸计的添加）
+
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+      2.不同模式下控制结构整理，引伸计没有整理、也没有测试，后续需要把引伸计的也像力传感器一样整理和测试好
+      3.需要配合上位机测试放大系数同步问题
+      4.需要配合上位机完成引伸计和扩展引伸计的测试
+
+version：V1.18.2
+date：2025-1-23 00:20:29
+address：上海
+content：1.利用两个伺服驱动器参数进行前馈的自动调整设计
+           √a.添加0x28 0x29 0x8E通信功能
+           √b.electronicGear、encoderResolution参数变量创建与使用
+           √c.功能测试
+         √2.不同模式下控制结构整理
+         √3.电子齿数修改成10000进行控制
+         4.测试高速和低速控制的测试，看是否能实现
+remark：1.电子齿数改成10000后，低速没有100000的线性，曲线是阶梯式的。
+        2.位移低速控制效果差了，载荷控制感觉效果低速时也不好控，也是阶梯式的。
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+      2.不同模式下控制结构整理，引伸计没有整理、也没有测试，后续需要把引伸计的也像力传感器一样整理和测试好
+
+version：V1.18.1
+date：2025-1-13 18:32:56
+address：上海
+content：1.找到位移多点标定后，无法清零问题，是因为线性表符号问题导致的查表错误，所以查表第一步要根据线性表中的斜率来确定查表方向。
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+
+version：V1.18.1
+date：2025-1-10 10:55:55
+address：上海
+content：1.修改settare的实现原理，力传感器和引伸计直接记录计算后的真实值，因为力传感器和引伸计是绝对位置传感器。
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+
+version：V1.18.0
+date：2025-1-7 12:12:49
+address：上海
+content：1.在位移上对多点标定进行了上下位机测试和debug，还需要对
+        √①多点标定清理后的细微余数进行排查,发现是斜率保留的小数点个数10位还是太少，需要15位左右才能满足位移的6位小数点精度要求，
+         现在暂时使用float的更多小数点精度，虽然在7位后会丢失精度，但是15位应该比10位有效一些。后续需要把协议改成double的。
+        √②斜率正负，符号正负用于控制试验机衡量的上下移动方向，线性表查表完成后的结果再×符号正负，这样才可以改变衡量运动方向
+        √③输出参数的方向用于控制输出的脉冲
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+remark：1.多点标定、单点标定 所涉及的代码区域(位移为例)
+          √√√a.原码值换算实际值(多点标定、单点标定) 辅助定位：poseCalcu
+          √√√b.实际值零点对应的原码值（多点标定），单点标定实际值零点对应的原码值就是0 辅助定位：sendata_update(void)
+          √√√c.periodCalcu 控制周期预测(多点标定、单点标定) 辅助定位：periodCalcu 
+             solution of c：暂时只依赖于单点标定的结果，因为速度值不能通过查表来换算预测，预测周期不需要非常精细的多点标定反算。
+                            后续可以记录当前线性表所在区间，然后查表换算的时候，只使用当前区间，避免重复计算。
+          √√√d.pid输出到pwm实际值解算（多点标定、单点标定） 辅助定位：pwmPosLsmCalcu(void)
+          √e.由滤波值filter或实际值orig反向推算出原码值（多点标定、单点标定） 辅助定位：loadFilterWithLenSwitch(MDSTRUCT *x, FILTER *filter, uint16_t filter_depth)的最下方
+
+version：V1.17.9
+date：2025-1-6 23:07:32
+address：上海
+content：1.在位移上对多点标定进行了上下位机测试和debug，还需要对
+        ①多点标定清理后的细微余数进行排查（可能是小数点保留问题）
+        ②斜率正负，符号正负，关系梳理，确定在线性表生成时是否需要带入符号运算
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+      2.需要对多点标定清理后的细微余数进行排查（可能是小数点保留问题）
+      3.斜率正负，符号正负，关系梳理，确定在线性表生成时是否需要带入符号运算
+      4.找AL.posCtrl.sign出现的地方
+
+version：V1.17.9
+date：2025-1-3 16:05:58
+address：上海
+content：1.进行脉冲输出函数修改，加入了滞环特性，每次预分频系数变化后重新初始化。
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+      2.多点标定需要用netassist进行多点标定效果测试，并和杨宏上位机进行测试。
+
+version：V1.17.8
+date：2025-1-2 11:10:25
+address：上海
+content：1.多点标定的查表函数编写
+        2.多点标定进行计算时，去皮值的原码值有可能不是0，应该提前计算出多点标定时的“0值”所对应的原码0点
+        针对问题2，每次进行sensor write后，根据LinPoint进行原码0点同步
+        3.多点标定的去皮值应该是(当前原码值 - 原码0点)
+        针对问题3，在计算去皮值时 - 原码0点
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+      2.多点标定需要用netassist进行多点标定效果测试，并和杨宏上位机进行测试。
+
+version：V1.17.7
+date：2024-12-23 23:07:36
+address：上海
+content：1.完善判断流程，结束相关标志
+todo：1.DoPEPosExt的Maintain模式可以参考误差窗口的大小来进行上下移动的切换。
+
+version：V1.17.6
+date：2024-12-23 23:07:36
+address：上海
+content：1.完善判断流程，结束相关标志
+todo：1.DoPEPosExt继续完善，其初始化，结束相关标志和变量情况复位，然后实现位移、力、应变三种模式的DoPEPosExt
+
+version：V1.17.5
+date：2024-12-20 01:39:54
+address：上海
+content：1.基本实现了DoPEPosExt，由位移触发力然后进行保持的过程，后续需要继续完善判断流程，及其初始化，结束相关标志和变量情况复位
+todo：1.DoPEPosExt继续完善，然后实现位移、力、应变三种模式的DoPEPosExt
+
+version：V1.17.5
+date：2024-12-13 14:21:15
+address：上海
+content：1.测试DoPETrig，DoPESHalt,DoPEPosExt
+todo：1.DoPEPosExt,目标位置检测存在问题需要继续debug！
+
+version：V1.17.5
+date：2024-12-12 15:10:44
+address：上海
+content：1.DoPEPosExt函数内容编写完成，待测试
+todo：1.DoPESHalt函数如果实验没问题，可以将emergency的halt替换成shalt
+      2.将轨迹切换TrackSwitch()，完成度检测CommandCompletionMonitor()，
+        这两个函数中的三种MODE的功能全部统一、完善。
+
+version：V1.17.4
+date：2024-12-8 18:50:55
+address：上海
+content：1.DoPEPosExt 目标位置保持函数,还有一半没有搞完
+todo：1.DoPESHalt函数如果实验没问题，可以将emergency的halt替换成shalt
+      2.将轨迹切换TrackSwitch()，完成度检测CommandCompletionMonitor()，
+        这两个函数中的三种MODE的功能全部统一、完善。
+
+version：V1.17.3
+date：2024-12-6 16:04:13
+address：上海
+content：1.DoPESHalt函数编写，待验证
+        2.DoPETrig函数编写，待验证
+todo：1.DoPESHalt函数如果实验没问题，可以将emergency的halt替换成shalt
+      2.将轨迹切换TrackSwitch()，完成度检测CommandCompletionMonitor()，
+        这两个函数中的三种MODE的功能全部统一、完善。
+
+version：V1.17.2
+date：2024-12-5 15:16:26
+address：上海
+content：1.移植了Modbus库，根据手控盒协议V1.2重新编写手控盒代码
+todo：1.待验证新版手控盒代码
+
+
+version：V1.17.0
+date：2024-11-27 01:13:20
+address：上海
+content：1.实现了485手控盒的逻辑功能
+        2.修复了pose.code初始无法显示上一次关闭时的位置记录值问题，原因是编码器采集定时器中断开启过早，相关变量被提前错误的更新了。
+todo：1.等手控盒端crc加好后，需要加上crc的验证
+      2.如果要保证触摸屏按键发送100%成功不冲突，最好是将触摸屏作为主机，主控板作为从机来进行标准modbus协议
+      3.手控盒数据显示更新很卡需要找问题
+
+version：V1.16.9
+date：2024-11-26 00:08:36
+address：上海
+content：1.编写了485手控盒的10功能和05功能部分代码
+todo：1.需要将以上485代码放入对应中断中，并且提炼成一个函数
+      2.loop task需要根据semaphore的情况来执行up，rapidUp，down，rapidDown，testStart，reset
+
+version：V1.16.8
+date：2024-11-21 17:49:41
+address：上海
+content：1.引伸计闭环控制部分、EXTEN_Process()函数控制内容编写验证完成，使用双闭环
+         2.strian应变的速度计算及滤波函数编写验证完成
+         3.TrackSwitch()函数内部Exten逻辑部分编写，待全面验证测试后修改补充
+todo：
+
+version：V1.16.7
+date：2024-11-20 00:27:20
+address：上海
+content：1.引伸计闭环控制部分编写
+todo：1.需要写EXTEN_Process()函数控制内容
+      2.需要写strian应变的速度计算及滤波函数
+      3.检查补充TrackSwitch()函数内部Exten逻辑部分。
+
+version：V1.16.6
+date：2024-11-16 19:09:08
+address：上海
+content：1.引伸计完成读取，1脚电源+ 2脚电源- 3脚信息+ 4脚信息-
+         2.修改了传感器sign、nominalValue的不同步问题
+todo：1.现在引伸计读取出来的是原始值Orig，后续看是否需要滤波，然后传递滤波值
+      2.引伸计单位计算需要考虑一下
+
+version：V1.16.5
+date：2024-11-15 12:21:29
+address：上海
+content：1.找到力传感器为什么读不出来是因为，引伸计传感器的传入参数写的是force，力被又一次赋0了
+todo：1.找一下传感器读不出数据的问题！
+      2.将引伸计的采集链路调通
+
+version：V1.16.4
+date：2024-11-14 21:56:10
+address：上海
+content：1.编写了CMD_DWND状态下组合移动的，CMD_START开始连续循环执行，以及CMD_DISCARD及时停止组合移动指令。
+        2.编写组合移动头指令的ModeFlags为CMD_MESSAGES的通信处理内容与loopctrl执行内容。
+        3.编写了组合移动头指令的ModeFlags为CMD_DWND|CMD_START的通信处理内容与loopctrl执行内容。
+todo：1.需要添加LOAD、EXT的组合移动指令，主要内容是在LOAD和EXT完成度检测函数内。
+
+version：V1.16.3
+date：2024-11-12 20:49:44
+address：上海
+content：1.编写在组合移动头指令的ModeFlags为CMD_DWND时，通信解析处理方式，保存指令列表于combinedMove
+           ，并在收到尾指令的Operation时，置位mySemaphore.move.combinedMove于对应设置CMD_START or CMD_DISCRAD
+todo：1.针对content1需要在loopcrtl中处理CMD_DWND状态下组合移动的，CMD_START开始连续循环执行，
+        以及CMD_DISCARD及时停止组合移动指令。
+      2.需要编写组合移动头指令的ModeFlags为CMD_MESSAGES的通信处理内容与执行内容。
+
+version：V1.16.2
+date：2024-11-8 14:12:42
+address：上海
+content：1.将编码器测速放在定时器中进行
+        2.对比PID，前馈PID，fhanPID控制效果和速度
+
+todo：1.需要编写DoPETrig触发后的两种处理结果
+        a.发送一条消息给上位机，应该是关于IpusTAN的响应帧
+        b.如果在组合移动序列中使用，则激活下一个命令
+      2.需要添加组合移动指令记录、处理函数相关内容
+        0x4E-0x4F为组合移动命令的指令，其发送顺序必须为DoPEBlockHeader(功能码0x4E)-->组合移动指令列-->DoPEBlockExecute(功能码0x4F)
+
+version：V1.16.1
+date：2024-11-7 15:10:14
+address：上海
+content：1.添加DoPETrig、DoPETrig_A
+        2.添加DoPEBlockHeader、DoPEBlockExecute
+todo：1.需要编写DoPETrig触发后的两种处理结果
+        a.发送一条消息给上位机，应该是关于IpusTAN的响应帧
+        b.如果在组合移动序列中使用，则激活下一个命令
+      2.需要添加组合移动指令记录、处理函数相关内容
+        0x4E-0x4F为组合移动命令的指令，其发送顺序必须为DoPEBlockHeader(功能码0x4E)-->组合移动指令列-->DoPEBlockExecute(功能码0x4F)
+
+version：V1.16.0
+date：2024-11-6 11:53:11
+address：上海
+content：1.排除波形抖动问题，原因：定时器8中断开启，原本用于脉冲计数，但是当脉冲频率高了之后会影响系统性能，现在不启用中断问题就解决了
+        2.添加了以太网MRAM存储，在全写和全读MRAM中加入了以太网，实现了以太网配置保存并自动重启。
+todo：1.看看能否实现只重启以太网，不重启系统的效果。思路：通过W5500_Restart()实现
+
+version：V1.16.0
+date：
+address：上海
+content：1.添加了以太网MRAM存储。
+todo：1.还需要将从MARAM中的以太网配置参数作为初始化配置参数。
+        2.还需要将写以太网参数加入现在的函数中，保证流程正确。
+
+version：V1.15.3
+date：2024-11-4 14:41:53
+address：上海
+content：1更正不是mcu坏了，是A- A+ B- B+编码器脉冲线序反了，导致编码器采值出现问题。
+        2.V1.15.3和V1.12.0，在高速的时候对比会发现，V1.15.3版本高速时波形是在异常波动的！
+          找到原因：因为V1.15.3中最小二乘滤波的时间宽度有1500ms，运算时间会很长，减小到500ms的宽度，就好很多了。
+
+version：V1.15.3
+date：2024-11-3 17:10:20
+address：上海
+content：1.找上行时，编码器采集回来的值就会少很多甚至是10倍，破案了！原来是mcu坏了，换了一块板子就没有问题了！下班！
+        2.V1.15.3和V1.12.0，在高速的时候对比会发现，V1.15.3版本高速时波形是在异常波动的！还没找到原因
+problem：1.找上行时，编码器采集回来的值就会少很多甚至是10倍；下行时就是正常的
+        2.V1.15.3和V1.12.0，在高速的时候对比会发现，V1.15.3版本高速时波形是在异常波动的！
+todo：1.标定系数重标一下，标定系数准adrc才有用！
+
+version：V1.15.2.2
+date：2024-10-31 22:48:54
+address：上海
+content：1.找Ethernet task 卡死的点
+
+version：V1.15.2.1
+date：2024-10-24 23:48:54
+address：上海
+content：1.针对需求规格书添加了Fun标号
+
+version：V1.15.2
+date：2024-10-17 22:17:07
+address：上海
+content：1.验证10kADC采样
+
+version：V1.15.1
+date：2024-10-13 17:33:34
+address：上海
+content：1.添加vTaskList()调用
+
+version：V1.15.0
+date：2024-10-11 10:08:54
+address：上海
+content：1.查找高速后卡机问题
+           |--I  去除了mainloop中滤波器部分的打印，在2mm/s一下的速度可以正常运动了
+           |--II 在2mm/s以上速度时，还是会卡住，怀疑是伺服驱动器该脉冲驱动口幅值受限，可以用开环验证一下,感觉上位机存在问题
+
+version：V1.14.4
+date：2024-10-9 11:01:40
+address：上海
+content：1.修改了线性回归滤波的bug（滤波长度变量类型uint8_t太小，导致的滤波长度虚设）
+
+version：V1.14.2
+date：2024-9-6 1:04:22
+address：上海
+content：1.pos控制加入了儒行控制
+         2.将重新修改好的pos adrc 用来整理 load控制双闭环中的内环pos环，实现了动态过程中较好的状态
+        但存在目标载荷位置处稳态震荡的问题。
+date：2024-9-6 10:33:03
+address：上海
+content：1.将vt不做处理，当做恒定的前馈，加入kp*err处理稳态误差问题（通常1就可以，如果出现不允许的误差可以适当增大），效果不错！
+
+version：V1.14.1
+date：2024-9-4 22:21:57
+address：上海
+content：1.针对"在0.005-0.001mm/s这一段中，adrc控制效果不太好，存在较大的稳态误差，启动也很慢，需要要找原因。"，这一问题
+                通过测试发现是伺服驱动器在这段指令范围内，启动跟不上，导致的稳态误差，
+                解决方法：通过适当调高 快速因子，在初始段给予更大的跟踪能力，但是会导致稳态上下微微抖动（可以接受范围）
+                         初步调节将这一段的快速因子设置为1.8
+
+version：V1.14
+date：2024-8-31 17:38:23
+address：上海
+content：1.eso的输入u一旦使用浮点运算，在结束第一次运动后，后面eso就是不工作了（z2，e都为0），暂时还没有找出原因。
+         2.在0.005-0.001mm/s这一段中，adrc控制效果不太好，存在较大的稳态误差，启动也很慢，需要要找原因。
+        
+thinkPoint:
+problem：1.加入z2后，在低速的时候，会因为加入z2，跟踪误差会约拉越大 
+
+version：V1.13
+date：2024年8月27日16:47:06
+address：上海
+content：1.位移闭环中加入z2在速度较大的时候可以很好的解决运动时的稳态误差问题
+         2.但依旧会存在接近目标值后控制突变，稳态误差很大的问题
+        
+thinkPoint:
+problem：1.加入z2后，在低速的时候，会因为加入z2，跟踪误差会约拉越大 
+
+version：V1.12
+date：2024-8-20 14:17:33
+address：上海
+content：1.查找无法运行问题。是mram数据丢失，导致系统无法正常运行
+           解决方法：1.暂时重写了一遍数据，写了一个参数备份函数，出问题后拿这个函数更新一下就行。
+                     2.下一板V1.3电路板要将mram的写保护引脚引到mcu上。
+         2.查找修改力标定系数后，点击清零就会导致非法数据的问题。是因为后期再sensor结构体中加入了sensorIntgr滤波时间变量，
+         在修改标定系数保存后，没有commbuf中的sensorIntgr为0，导致滤波时间变为0，从而滤波值出错。
+           解决方法：在进行memcpy前将当前sensorIntgr值更新到commbuf中。
+thinkPoint:
+problem：1.力闭环要写成归一化形式的，更方便调试理解
+         2.新版动态控制的生成器需要赶紧写完
+         3.要将力短时间的滤波方法，从平均滤波换成最小二乘滤波
+
+version：V1.09.92
+date：2024-7-15 16:26:00
+address：上海
+content：1.变周期adrc控制
+thinkPoint:
+problem：1.adrc到达目标位置后突然变化，可能是fhan输出已经为0，但是总扰动依旧补偿才出现这个问题。
+        2.不加入z2总扰动，直接使用fhan进行计算，在当前10000的电子齿数下，可以满足位移速度范围0.000016mm/s~3mm/s,即0.0001mm/min~180mm/min
+        3.需要好好研究一下fhan的负反馈原理
+        4.当高速位移时比如说速度大于0.01mm/s时，预留一段儒行距离，比如说总移动距离的0.5%，这样就可以做到0.000012mm的最终目标精度。
+
+version：V1.09.91
+date：2024-7-12 15:44:08
+address：上海
+content：1.手控盒功能设计（DI）
+thinkPoint:
+problem：1.代码已经完成，也验证成功，还差把手控盒接上去
+        2.手控盒是24V供电，DB9接头上缺少，需要把5V的0Ω电阻去掉飞线24V。（5V可以用但是会导致灯比较暗）
+        3.手控盒按下是低电平，不按下则悬空。
+        4.试验按键按下应该怎么做？
+
+version：V1.09.90
+date：2024-7-2 09:34:29
+address：上海
+content：1.将电子齿数改为100k(100000)
+         2.根据规划速度，推出预计输出频率，再反算出闭环周期，实现变周期位置控制
+thinkPoint:
+problem：
+
+version：V1.09.83
+date：2024-7-1 09:28:33
+address：上海
+content：1.通过双闭环pi+adrc，实现力闭环控制
+thinkPoint:
+problem：
+
+version：V1.09.7
+date：2024-6-23 14:30:20
+address：上海
+content：1.所有算法先都使用最基本的pid，实现力闭环
+thinkPoint:
+problem：
+
+date：2024-6-24 23:45:48
+address：上海
+content：1.将力闭环周期改为了20ms，这样频率输出就可以最小达到50hz，通过pid实现了50N/s,100N/s,目标值1000-1500N的力闭环
+         2.对频率输出部分做了改动，根据不同模式和频率，进行频率修正
+thinkPoint:1.针对problem1，我认为在误差接近目标值或控制速度极低的情况下，必须适当拉长控制周期，形成变控制周期闭环
+problem：1.频率输出和闭环周期问题，在脉冲式电拉控制结构下还是需要再考虑有什么方法，能确保低频率下脉冲的完整性
+
+
+version：V1.09.6
+date：2024-6-23 14:27:29
+address：上海
+content：1.发现位移校准系数存在问题，是因为编码器采样四倍频了，但是后续没有除掉四倍频
+thinkPoint:
+problem：1.碰到下限位的时候，在触发后往上走好像有些问题，而上限位触发，往下走没问题
+         2.可能还是 上下移动的判断有问题,(问题暂时解决，还是出在运动方向判断上，这里涉及到浮点数在0点处浮点精度问题，
+         后面想着尽量明确精度，利用整型来进行数据判断和输出)
+         3.通过速度方向判断限位还是存在延迟问题的，还是需要根据指令或其他来解决
+
+version：V1.09.5
+date：2024-6-21 11:12:09
+address：上海
+content：1.判断上下限位，上下限位限制运动方向，当下限位触发后，只有往上的指令有效，当上限位触发后，只有往下的指令有效。
+        判断上下限位，上下限位限制运动方向，当下限位触发后，只有往上的指令有效，当上限位触发后，只有往下的指令有效。
+thinkPoint:
+problem：1.碰到下限位的时候，在触发后往上走好像有些问题，而上限位触发，往下走没问题
+         2.可能还是 上下移动的判断有问题,(问题暂时解决，还是出在运动方向判断上，这里涉及到浮点数在0点处浮点精度问题，
+         后面想着尽量明确精度，利用整型来进行数据判断和输出)
+         3.通过速度方向判断限位还是存在延迟问题的，还是需要根据指令或其他来解决
+
+version：V1.09.4
+date：2024-6-12 09:35:59
+address：上海
+content：1.添加滤波时间指令整流程       已完成
+         2.pid力闭环功能实现
+thinkPoint:
+problem：1.将svPWM.pos改成float后，用adrc进行控制，会出现一开始能移动，第二条指令后就出问题的情况，需要找找问题
+
+version：V1.09.2
+date：2024-6-5 22:47:04
+address：上海
+content：1.滤波时间拉长，当处于ready mode下时，滤波时间拉长到3000ms
+         2.重新编写频率输出fclk更改函数
+thinkPoint:
+problem：1.将svPWM.pos改成float后，用adrc进行控制，会出现一开始能移动，第二条指令后就出问题的情况，需要找找问题
+
+version：V1.09.1
+date：2024-6-4 10:48:16
+address：上海
+content：1.编写紧急停止模式
+thinkPoint:1.可以试试pid在低速时的效果，如果低速时pid效果好，那么就可以在低速时将adrc简化成pid，做好速度的切换控制。
+problem：1.急停触发还没有写好，纠结于网络故障恢复后回到什么状态。
+         2.校准模式也需要写。
+
+version：V1.09
+date：2024-5-28 18:01:10
+address：上海
+content：1.编写余弦生成函数：I、余弦生成初始化 cosPgInit()
+                            II、余弦轨迹生成器 cosPosGenerator()
+thinkPoint:1.可以试试pid在低速时的效果，如果低速时pid效果好，那么就可以在低速时将adrc简化成pid，做好速度的切换控制。
+problem：1.急停触发还没有写好，纠结于网络故障恢复后回到什么状态。
+         2.校准模式也需要写。
+
+version：V1.08
+date：2024-5-28 13:36:53
+address：上海
+content：1.利用pid验证速度低于0.01mm/s的想法   验证后：表明效果不好
+thinkPoint:1.可以试试pid在低速时的效果，如果低速时pid效果好，那么就可以在低速时将adrc简化成pid，做好速度的切换控制。
+problem：1.急停触发还没有写好，纠结于网络故障恢复后回到什么状态。
+         2.校准模式也需要写。
+
+version：V1.07
+date：2024-5-26 11:00:34
+address：上海
+content：1.系统模式分类：I、参数设置 II、运动准备 III、闭环执行 IV、急停触发 V、校准模式 进行中
+         2.去除了leso中的z2状态限幅，高速就可以跟随了。但是速度低于0.1mm/s时，fhan的参数就用不了同一套了，需要解决低速问题。
+thinkPoint:1.可以试试pid在低速时的效果，如果低速时pid效果好，那么就可以在低速时将adrc简化成pid，做好速度的切换控制。
+problem：1.急停触发还没有写好，纠结于网络故障恢复后回到什么状态。
+         2.校准模式也需要写。
+
+version：V1.06 
+date：2024-5-24 23:01:40
+address：上海
+content：1.系统模式分类：I、参数设置 II、运动准备 III、闭环执行 IV、急停触发 V、校准模式 进行中
+         2.引入非线性控制律fhan，发现依据位置生成器的相关信息作为fhan的输入和参数，可以实现一定程度上的自适应控制，
+           I、其中h需要在0.001s闭环周期的基础上适当放大150倍，这样fhan输出波形不会剧烈抖震，
+           II、但现在的参数，在速度大于7mm/s的恒速阶段会震动，
+           III、x2变量直接用规划的加速度pg.aa来设计，是否是在恒速阶段导致的原因
+           IV、参数r现在设计成匀速的比例关系 1.5*pg.vm,在速度低于6mm/s效果很不错，但是高于7有震动
+problem：1.DOPE中的逻辑信号字，状态字，与我们当前的系统有一些不太匹配，并且冗余重复比较多，希望在参考DOPE的基础上，
+        总结出适合本系统的状态字、模式字、逻辑信号字
+
+version：V1.05 
+date：2024-5-22 10:31:30
+address：上海
+content：1.一阶adrc初步试验	已完成
+	       2.进行试验机输出频率与丝杠移动距离的参数辨识数据集采集 未完成
+thinkPoint:
+problem：
+
+version：V1.03.8  （V1.03是用来重新代码重构的）
+date：2024-5-22 10:31:30
+address：上海
+content：1.系统模式分类：I、参数设置 II、运动准备 III、闭环执行 IV、急停触发 
+thinkPoint:
+problem：
+
+version：V1.03.7  （V1.03是用来重新代码重构的）
+date：2024-5-19 11:18:43
+address：上海
+content：1.进行紧急停止处理程序编写，并附加了心跳节拍watchdog   已完成
+thinkPoint:
+problem：
+
+version：V1.03.6  （V1.03是用来重新代码重构的）
+date：2024-5-19 11:18:43
+address：上海
+content：1.完善、测试 所有参数配置与界面有关的交互、存储、使用，读取代码  进行中
+          I、输出参数的交互(编写√，验证)、存储(编写√，验证)、使用(编写√，验证)
+          II、写了 storageParaDefaultInit()，清理了parameter_default_init()中多余的参数，已完成
+          III、参数交互 存储 使用还需继续编写，要整理清楚一些没有用的变量。
+         2.进行变窗口滤波的标准化整理,线性连续变化窗口，归纳总结同一单位判断条件
+         3.进行紧急停止处理程序编写   进行中
+thinkPoint:
+problem：
+
+version：V1.03.55  （V1.03是用来重新代码重构的）
+date：2024-5-16 15:23:54
+address：上海
+content：1.完善、测试 所有参数配置与界面有关的交互、存储、使用，读取代码  进行中
+          I、输出参数的交互(编写√，验证)、存储(编写√，验证)、使用(编写√，验证)
+          II、写了 storageParaDefaultInit()，清理了parameter_default_init()中多余的参数，待验证
+          III、参数交互 存储 使用还需继续编写，要整理清除一些没有用的变量。
+          IV、sendataPose在mram中存储时，与POS相关参数重复，需要重新宏定义sendataPose在mram中的位置，不可以同样使用sendata的地址（注意） 已完成
+thinkPoint:
+problem：
+
+version：V1.03.54  （V1.03是用来重新代码重构的）
+date：2024-5-15 14:01:50
+address：上海
+content：1.测试新板子在新机器上传感器是否存在信号干扰     已完成（干扰现象不明显，基本没有）
+thinkPoint:1.系统分类，首先要分配好状态，然后根据当前每个部件所处状态，来进行运行模式的判断与切换。
+problem：1.在做随k变化的滑动均值滤波的过程中，构造的sigmod函数变化速率太快，
+         2.并且应该尝试当滤波窗口变大时应该从当前点重新开始累计计算，且当累计数据没有>=窗口值时，除以的窗口宽度应该为当前累计数据的个数。
+
+version：V1.03.53  （V1.03是用来重新代码重构的）
+date：2024-5-14 21:41:10
+address：上海
+content：1.手动测试指令 控制器部分测试    已完成
+thinkPoint:1.系统分类，首先要分配好状态，然后根据当前每个部件所处状态，来进行运行模式的判断与切换。
+problem：
+
+version：V1.03.52  （V1.03是用来重新代码重构的）
+date：2024-5-13 21:37:24
+address：上海
+content：1.设计DO映射功能                                       已完成
+thinkPoint:1.系统分类，首先要分配好状态，然后根据当前每个部件所处状态，来进行运行模式的判断与切换。
+problem：
+
+version：V1.03.5  （V1.03是用来重新代码重构的）
+date：2024-5-11 12:01:14
+address：上海
+content：1.整理ws结构体中的内容
+          I.将WORK_STATE结构体替换成APP_LAYER_VARIABLE_STRUCT，将变量ws替换成AL（Application Layer Variable）
+          II.更改了movepara_buf.pg_ini_flag归类到信号量中mySemaphore.move.pg_init
+          III.更改了movepara_buf中的一些flag，改为信号量mysemaphore.comm
+              uint8_t sendataUpdate;//传感器参数更新标志位
+              uint8_t outputUpdate;//输出参数更新标志位
+              uint8_t transperiodUpdate;//周期上报参数更新标志位
+              uint8_t ctrlstructUpdate;//控制结构更新标志位
+         2.设计DO映射功能                                       未完成
+         3.系统模式分类：I、参数设置 II、运动准备 III、闭环执行 IV、急停触发 未完成
+thinkPoint:
+problem：
+
+version：V1.03.4  （V1.03是用来重新代码重构的）
+date：2024-5-11 11:53:36
+address：上海
+content：1.添加DI DB9的底层检测方法，通过DIDetect()实现，提供DI的电平值value、按下（连接）时间pressTime、松手（未连接）时间unpressTime，映射层需同步这三个值给应用层使用，
+           这里的unpressTime在“注册监测”时使用到了。
+         2.设计DO映射功能                                       未完成
+         3.系统模式分类：I、参数设置 II、运动准备 III、闭环执行 IV、急停触发 未完成
+thinkPoint:
+problem：
+
+version：V1.03.3  （V1.03是用来重新代码重构的）
+date：2024-5-10 20:24:39
+address：上海
+content：1.重新设计了DI DB9的底层检测方法，通过DIDetect()实现，提供DI的电平值value与按下（连接）时间pressTime，映射层只需同步这两个值给应用层使用
+         2.只有三种传感器 载荷传感器  引伸计1  扩展(引伸计2)       已完成  （已完成DB9接口检测，已完成传感器与ADC通道的任意映射，已完成多个插头已经插上控制器时，控制器重启时DB9检测CON和映射问题）
+         3.设计DO映射功能                                       未完成
+         4.系统模式分类：I、参数设置 II、运动准备 III、闭环执行 IV、急停触发 未完成
+problem：1.如果在掉电的时候插着三个传感器，然后在掉电情况下其中一个被拔掉了，再上电后从mram中读出的传感器连接状态不一样，如何处理mram和实际情况不匹配问题
+        （解决方法：添加“注册监测”，检测已经注册的传感器对应的CON口是否为未连接，如果发生这种不匹配情况，就要把相应的CON信号量置为传感器拔出事件，然后去处理）
+         2.如果在掉电的时候插着三个传感器，然后在掉电情况下交换其中几个位置，再上电后从mram中读出的传感器连接状态和通道映射都是混乱的（这种操作应该被禁止，当前系统电路无法解决这个问题）
+
+version：V1.03.2  （V1.03是用来重新代码重构的）
+date：2024-5-8 10:15:48
+address：上海
+content：1.设计DI映射功能                                       已完成
+         2.只有三种传感器 载荷传感器  引伸计1  扩展(引伸计2)       未完成  已完成DB9接口检测
+         3.设计DO映射功能                                       未完成
+         4.系统模式分类：I、参数设置 II、运动准备 III、闭环执行 IV、急停触发
+thinkPoint:1.我们将EEPROM地址与SenserType绑定后，不需要考虑读取传感器EEPROM数据的映射问题，
+            这样只需考虑当前adc采集通道与传感器种类的映射。
+            通过DB9检测CON，发送信号量然后通过函数senserTypeMap就可以实现三通道任意插入/拔出
+problem：1.如何处理当多个插头已经插上控制器时，控制器重启时DB9检测CON和映射问题。（想法：通过mram记录，上电如果已经有连接了则不进行判断，用mram中记录的值，除非出现插拔现象才会进行检测和映射）
+        2.当使用去皮后，如果拔掉DB9插头，则会显示（0-去皮）值，应该在拔掉后显示0(解决方法：当SensorMapNum[0] == SENSOR_NO_CHANNEL，令force.code = ws.tare.value[4];)
+
+version：V1.03.1  （V1.03是用来重新代码重构的）
+date：2024-5-6 11:42:15
+address：上海
+content：1.设计DI映射功能                                       已完成
+         2.只有三种传感器 载荷传感器  引伸计1  扩展(引伸计2)       未完成  已完成接口检测
+         3.设计DO映射功能                                       未完成
+
+version：V1.03.0  （V1.03是用来重新代码重构的）
+date：2024-4-28 00:44:55
+address：上海
+content：1.输入 输出硬件层重新整理
+
+version：V1.02.2
+date：2024-4-22 21:01:31
+address：上海
+content：1.进行MRAM移植
+         2.MRAM参数初始化,将板载EEPROM的功能通过EEPROM实现，
+            主要实现功能：①读写所有板载存储参数  ② mram_write_monitor() 函数
+problem：mram_write_monitor()好像反应不及时，communicate进行了参数设置后，信号量有置1但是好像没有进行存储，
+          ①log更新丢失?  ②任务空间溢出？ ③其他问题？
+
+version：V1.02.1
+date：2024-4-19 15:08:18
+address：上海
+content：配合硬件V1.2，进行24位ADC噪声测试
+
+version：V1.02
+date：2024-4-1 19:34:07
+address：上海
+content：加入了easylogger，轻量型日志库
+
+version：V1.01.1
+date：2024-3-11 21:34:31
+address：上海
+content：测试ADC电路电源噪声问题使用
+
+version：V1.01
+date：2024-3-10 16:54:07
+address：济南
+content：力PID调试初步成功，LOAD P 0.0015，I 1e-6
+problem：伺服驱动器会引入噪声，需要重新设计隔离电路
+
+version：V1.00.1
+date：2024-3-10 11:47:41
+address：济南
+content：力PID调试，直接使用pid进行力闭环
+
+version：V1.00 
+date：2024-3-10 11:42:58
+address：济南
+content：位置PID调试完成
+
+
+2023/12/04
+修改了函数TrackSwitch()，
+①原本函数统一使用pg轨迹规划结构体，本次添加了pgLoad轨迹规划结构体，为后期力位切换做准备
+
+存在问题：
+①Ext函数没有编写完
+②DynCycle的modify的峰值halt没有写，可以参照normal来加入。
+
+2023/12/10  20:05
+①添加功能码0x22 0x23 0x8B
+②修改0xA0 
+③修改了功能码0x04 去除上传时间配置字节段
+  将传输时间参数 ws.DataTransmitPeriod 加入EEPROM中，开机读取
+
+存在问题：
+①Ext函数没有编写完
+②DynCycle的modify的峰值halt没有写，可以参照normal来加入。
+③CurrentData_Fifo_Push(void)中传输的数据还是测试数据，没有将实际数据上传
+
