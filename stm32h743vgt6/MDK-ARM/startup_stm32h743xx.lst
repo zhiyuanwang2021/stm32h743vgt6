@@ -1269,9 +1269,10 @@ ARM Macro Assembler    Page 20
 Command Line: --debug --xref --diag_suppress=9931 --cpu=Cortex-M7.fp.dp --apcs=
 interwork --depend=stm32h743vgt6\startup_stm32h743xx.d -ostm32h743vgt6\startup_
 stm32h743xx.o -I../Inc -I../Host -I../Drivers/CMSIS/Include -I.\RTE\_stm32h743v
-gt6 --predefine="__MICROLIB SETA 1" --predefine="__UVISION_VERSION SETA 534" --
-predefine="_RTE_ SETA 1" --predefine="STM32H743xx SETA 1" --predefine="_RTE_ SE
-TA 1" --list=startup_stm32h743xx.lst startup_stm32h743xx.s
+gt6 -IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include
+ --predefine="__MICROLIB SETA 1" --predefine="__UVISION_VERSION SETA 534" --pre
+define="_RTE_ SETA 1" --predefine="STM32H743xx SETA 1" --predefine="_RTE_ SETA 
+1" --list=startup_stm32h743xx.lst startup_stm32h743xx.s
 
 
 

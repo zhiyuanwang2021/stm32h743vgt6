@@ -22,6 +22,7 @@
 #include "task.h"
 #include "main.h"
 #include "cmsis_os.h"
+#include "tim.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -59,6 +60,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define TIM6_PRINT_10MS_INTERVAL_MS  10U
+#define TIM6_PRINT_1S_INTERVAL_MS    1000U
 
 /* USER CODE END PD */
 
@@ -92,6 +95,8 @@ osSemaphoreId cs5552SemHandle;
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
 void Controller_status_update(uint16_t status_all);//???????????????????±?????????§???????è??????ì????????????????????????  ?????????ì????????è???????????è??????°????????????????????
+static uint32_t Tim6GetUpdateFrequencyHz(void);
+static uint32_t Tim6GetIntervalCount(uint32_t interval_ms, uint32_t update_hz);
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void const * argument);
@@ -110,6 +115,39 @@ void configureTimerForRunTimeStats(void);
 unsigned long getRunTimeCounterValue(void);
 
 /* USER CODE BEGIN 1 */
+static uint32_t Tim6GetUpdateFrequencyHz(void)
+{
+  uint32_t pclk1_hz = HAL_RCC_GetPCLK1Freq();
+  uint32_t tim6_clock_hz = pclk1_hz;
+  uint32_t timer_divisor;
+
+  if (HAL_RCC_GetHCLKFreq() != pclk1_hz)
+  {
+    tim6_clock_hz *= 2u;
+  }
+
+  timer_divisor = (htim6.Init.Prescaler + 1u) * (htim6.Init.Period + 1u);
+  if (timer_divisor == 0u)
+  {
+    return 1u;
+  }
+
+  return tim6_clock_hz / timer_divisor;
+}
+
+static uint32_t Tim6GetIntervalCount(uint32_t interval_ms, uint32_t update_hz)
+{
+  uint32_t interval_count;
+
+  interval_count = (update_hz * interval_ms + 999u) / 1000u;
+  if (interval_count == 0u)
+  {
+    interval_count = 1u;
+  }
+
+  return interval_count;
+}
+
 /* Functions needed when configGENERATE_RUN_TIME_STATS is on */
 __weak void configureTimerForRunTimeStats(void)
 {
@@ -172,36 +210,36 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityRealtime, 0, 128);
   defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 
   /* definition and creation of loopTask */
-  // osThreadDef(loopTask, LoopTask, osPriorityRealtime, 0, 2048);
-  // loopTaskHandle = osThreadCreate(osThread(loopTask), NULL);
+  osThreadDef(loopTask, LoopTask, osPriorityRealtime, 0, 2048);
+  loopTaskHandle = osThreadCreate(osThread(loopTask), NULL);
 
-  // /* definition and creation of watchdogTask */
-  // osThreadDef(watchdogTask, WatchdogTask, osPriorityLow, 0, 128);
-  // watchdogTaskHandle = osThreadCreate(osThread(watchdogTask), NULL);
+  /* definition and creation of watchdogTask */
+  osThreadDef(watchdogTask, WatchdogTask, osPriorityLow, 0, 128);
+  watchdogTaskHandle = osThreadCreate(osThread(watchdogTask), NULL);
 
-  // /* definition and creation of comTask */
-  // osThreadDef(comTask, CommuicationTask, osPriorityNormal, 0, 512);
-  // comTaskHandle = osThreadCreate(osThread(comTask), NULL);
+  /* definition and creation of comTask */
+  osThreadDef(comTask, CommuicationTask, osPriorityNormal, 0, 512);
+  comTaskHandle = osThreadCreate(osThread(comTask), NULL);
 
-  // /* definition and creation of waveTask */
-  // osThreadDef(waveTask, WaveTask, osPriorityHigh, 0, 256);
-  // waveTaskHandle = osThreadCreate(osThread(waveTask), NULL);
+  /* definition and creation of waveTask */
+  osThreadDef(waveTask, WaveTask, osPriorityHigh, 0, 256);
+  waveTaskHandle = osThreadCreate(osThread(waveTask), NULL);
 
-  // /* definition and creation of ethernetTask */
-  // osThreadDef(ethernetTask, EthernetTask, osPriorityNormal, 0, 1024);
-  // ethernetTaskHandle = osThreadCreate(osThread(ethernetTask), NULL);
+  /* definition and creation of ethernetTask */
+  osThreadDef(ethernetTask, EthernetTask, osPriorityNormal, 0, 1024);
+  ethernetTaskHandle = osThreadCreate(osThread(ethernetTask), NULL);
 
-  // /* definition and creation of cdatatranstask */
-  // osThreadDef(cdatatranstask, CDataTransTask, osPriorityNormal, 0, 256);
-  // cdatatranstaskHandle = osThreadCreate(osThread(cdatatranstask), NULL);
+  /* definition and creation of cdatatranstask */
+  osThreadDef(cdatatranstask, CDataTransTask, osPriorityNormal, 0, 256);
+  cdatatranstaskHandle = osThreadCreate(osThread(cdatatranstask), NULL);
 
-  // /* definition and creation of eepromTask */
-  // osThreadDef(eepromTask, EepromTask, osPriorityLow, 0, 512);
-  // eepromTaskHandle = osThreadCreate(osThread(eepromTask), NULL);
+  /* definition and creation of eepromTask */
+  osThreadDef(eepromTask, EepromTask, osPriorityLow, 0, 512);
+  eepromTaskHandle = osThreadCreate(osThread(eepromTask), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -222,23 +260,42 @@ extern volatile uint32_t ch0_invalid_sample_count;
 void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN StartDefaultTask */
-  uint8_t printCounter100ms = 0u;
+  uint32_t tim6UpdateHz = Tim6GetUpdateFrequencyHz();
+  uint32_t tim6Print10msCount = Tim6GetIntervalCount(TIM6_PRINT_10MS_INTERVAL_MS, tim6UpdateHz);
+  uint32_t tim6Print1sCount = Tim6GetIntervalCount(TIM6_PRINT_1S_INTERVAL_MS, tim6UpdateHz);
+
   /* Clear the initial token created by the binary semaphore. */
   osSemaphoreWait(cs5552SemHandle, 0);
 
   /* Infinite loop */
   for(;;)
   {
-        osDelay(10);
-        printf("%.6f\r\n",g_voltage_filtered_ch0);
-        // if (++printCounter100ms >= 10u)
-        // {
-        //   printCounter100ms = 0u;
-        //   printf("ch0_valid_sample_count:%lu ch0_invalid_sample_count:%lu\r\n",
-        //          (unsigned long)ch0_valid_sample_count,
-        //          (unsigned long)ch0_invalid_sample_count);
-				//  ch0_valid_sample_count = 0;
-        // }
+        if (osSemaphoreWait(cs5552SemHandle, osWaitForever) == osOK)
+        {
+          // taskENTER_CRITICAL();
+          // HAL_GPIO_WritePin(P_ADCCS1_GPIO_Port, P_ADCCS1_Pin, GPIO_PIN_SET);
+          
+          CS5552_Tim6SampleAndFilter();
+          // HAL_GPIO_WritePin(P_ADCCS1_GPIO_Port, P_ADCCS1_Pin, GPIO_PIN_RESET);
+          // taskEXIT_CRITICAL();
+          tim6SignalCounter++;
+          tim6PrintFlag = 1u;
+
+          if ((tim6SignalCounter % tim6Print10msCount) == 0u)
+          {
+            printf("%.6f\r\n", g_voltage_filtered_ch0);
+          }
+
+          if (tim6SignalCounter >= tim6Print1sCount)
+          {
+            printf("-----%lu-----%lu-----\r\n",
+                   (unsigned long)ch0_valid_sample_count,
+                   (unsigned long)ch0_invalid_sample_count);
+            ch0_valid_sample_count = 0u;
+            ch0_invalid_sample_count = 0u;
+            tim6SignalCounter = 0u;
+          }
+        }
   }
   /* USER CODE END StartDefaultTask */
 }

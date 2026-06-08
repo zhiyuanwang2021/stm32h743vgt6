@@ -53,6 +53,7 @@ stm32h743vgt6\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/tim
 stm32h743vgt6\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h
 stm32h743vgt6\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 stm32h743vgt6\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
+stm32h743vgt6\freertos.o: ../Inc/tim.h
 stm32h743vgt6\freertos.o: ../Host/control.h
 stm32h743vgt6\freertos.o: ../Host/in_out.h
 stm32h743vgt6\freertos.o: ../Hardware/DO.h
@@ -97,4 +98,3 @@ stm32h743vgt6\freertos.o: ../Host/mram_manage.h
 stm32h743vgt6\freertos.o: ../Hardware/MRAM/MRAM.h
 stm32h743vgt6\freertos.o: ../ADRC/adrc.h
 stm32h743vgt6\freertos.o: ../Hardware/CS5552.h
-stm32h743vgt6\freertos.o: ../Inc/tim.h

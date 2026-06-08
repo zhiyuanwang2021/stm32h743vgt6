@@ -27,17 +27,20 @@ Project File Date:  06/08/2026
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 7 (build 960)', folder: 'D:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'stm32h743vgt6'
-compiling freertos.c...
-../Src/freertos.c(225): warning:  #177-D: variable "printCounter100ms"  was declared but never referenced
-    uint8_t printCounter100ms = 0u;
-../Src/freertos.c: 1 warning, 0 errors
+compiling tim.c...
 linking...
-Program Size: Code=82208 RO-data=2288 RW-data=1528 ZI-data=149192  
+Program Size: Code=118820 RO-data=2708 RW-data=1704 ZI-data=247296  
 FromELF: creating hex file...
 After Build - User command #1: "D:\Keil_v5\\ARM\ARMCC\bin\fromelf.exe" --bin --output="c:\Users\10331\Desktop\new\stm32h743vgt6\MDK-ARM\stm32h743vgt6.bin" "stm32h743vgt6\stm32h743vgt6.axf"
-"stm32h743vgt6\stm32h743vgt6.axf" - 0 Error(s), 1 Warning(s).
+"stm32h743vgt6\stm32h743vgt6.axf" - 0 Error(s), 0 Warning(s).
 
 <h2>Software Packages used:</h2>
+
+Package Vendor: ARM
+                https://www.keil.com/pack/ARM.CMSIS.6.2.0.pack
+                ARM.CMSIS.6.2.0
+                CMSIS (Common Microcontroller Software Interface Standard)
+   * Component: CORE Version: 6.1.1
 
 Package Vendor: Keil
                 https://www.keil.com/pack/Keil.STM32H7xx_DFP.4.1.3.pack
@@ -46,9 +49,12 @@ Package Vendor: Keil
 
 <h2>Collection of Component include folders:</h2>
   .\RTE\_stm32h743vgt6
+  C:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include
 
 <h2>Collection of Component Files used:</h2>
-Build Time Elapsed:  00:00:03
+
+   * Component: ARM::CMSIS:CORE:6.1.1
+Build Time Elapsed:  00:00:04
 </pre>
 </body>
 </html>

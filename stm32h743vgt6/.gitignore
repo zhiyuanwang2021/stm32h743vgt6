@@ -1,0 +1,40 @@
+# STM32CubeMX / Keil MDK-ARM
+
+# Keil user-specific files
+*.uvguix.*
+*.uvoptx
+
+# Root-level generated artifacts
+/MDK-ARM/*.bin
+/MDK-ARM/*.lst
+
+# Keil build outputs in the target output folder
+/MDK-ARM/stm32h743vgt6/*.o
+/MDK-ARM/stm32h743vgt6/*.d
+/MDK-ARM/stm32h743vgt6/*.axf
+/MDK-ARM/stm32h743vgt6/*.bin
+/MDK-ARM/stm32h743vgt6/*.hex
+/MDK-ARM/stm32h743vgt6/*.map
+/MDK-ARM/stm32h743vgt6/*.htm
+/MDK-ARM/stm32h743vgt6/*.dep
+/MDK-ARM/stm32h743vgt6/*.lnp
+/MDK-ARM/stm32h743vgt6/*.build_log.htm
+
+# Local editor caches and logs
+/.vscode/*.db
+/.vscode/*.opendb
+/.vscode/ipch/
+/.vscode/.browse.VC.db*
+
+/MDK-ARM/.vscode/*.log
+/MDK-ARM/.vscode/*.lock
+/MDK-ARM/.vscode/*.db
+/MDK-ARM/.vscode/*.opendb
+/MDK-ARM/.vscode/ipch/
+/MDK-ARM/.vscode/.browse.VC.db*
+
+# Generic transient files
+*.tmp
+*.temp
+Thumbs.db
+Desktop.ini

@@ -139,11 +139,11 @@ static CS5552_FrameStatus CS5552_ReadRegFrame(uint8_t reg_addr, uint32_t *out_da
         uint8_t expected_cksum = CS5552_CalcSumCheck(&rxBuf[1]);
 
         if (rxBuf[5] != expected_cksum) {
-            printf("CS5552 reg 0x%02X checksum mismatch chip=%u got=0x%02X exp=0x%02X\r\n",
-                   reg_addr,
-                   (unsigned)cs5552_chip,
-                   (unsigned)rxBuf[5],
-                   (unsigned)expected_cksum);
+            // printf("CS5552 reg 0x%02X checksum mismatch chip=%u got=0x%02X exp=0x%02X\r\n",
+            //        reg_addr,
+            //        (unsigned)cs5552_chip,
+            //        (unsigned)rxBuf[5],
+            //        (unsigned)expected_cksum);
             return CS5552_FRAME_STATUS_CHECKSUM_ERROR;
         }
     }

@@ -59,8 +59,6 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define FIRMWAREVERSION "1.16.7"
-#define TIM6_PRINT_1S_COUNT 300U
-#define TIM6_SEM_RELEASE_10MS_COUNT 10U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -77,7 +75,6 @@ volatile float g_voltage_filtered_ch0 = 0.0f;
 volatile uint8_t g_voltage_filtered_valid_ch0 = 0u;
 volatile uint32_t ch0_valid_sample_count = 0u;
 volatile uint32_t ch0_invalid_sample_count = 0u;
-static uint8_t tim6SemReleaseCounter = 0u;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -93,6 +90,38 @@ extern volatile uint8_t tim6PrintFlag;
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void CS5552_Tim6SampleAndFilter(void)
+{
+  uint32_t adc_raw;
+  int32_t adc_code;
+
+  if (!cs5552_ready) {
+    return;
+  }
+
+  CS5552_SelectChip(CS5552_CHIP_0);
+  if (CS5552_ReadReg(REG_CONV_DATA, &adc_raw)) {
+    uint32_t top3 = (adc_raw >> 29) & 0x7u;
+    if (CS5552_ParseConvData(adc_raw, 1u, &adc_code, NULL) &&
+        !(top3 == 0x2u || top3 == 0x3u || top3 == 0x4u || top3 == 0x5u ||
+          adc_raw == 0xFFFFFFFFu || adc_raw == 0xFFFFFFFEu || adc_raw == 0x0u)) {
+      ch0_valid_sample_count++;
+      {
+        int32_t adc_24bit = adc_code >> 6;
+        float voltage_mv = CS5552_ConvertToVoltage(adc_24bit, 64);
+        float voltage_filtered = Filter_Update(&voltage_filter_ch0, voltage_mv);
+        g_voltage_filtered_ch0 = voltage_filtered * 1000;
+        g_voltage_filtered_valid_ch0 = 1u;
+      }
+    } else {
+      
+    }
+  } else {
+    ch0_invalid_sample_count++;
+    // printf("CH0 Read Error!\r\n");
+  }
+}
+
 /* Fun_111 */
 void hardwareInit(void){
   //HAL_TIM_PWM_Start_IT(&htim8,TIM_CHANNEL_1);
@@ -207,23 +236,23 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_I2C2_Init();
+  MX_SPI1_Init();
+  MX_SPI2_Init();
+  MX_SPI3_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_TIM4_Init();
   MX_TIM5_Init();
-  MX_TIM8_Init();
-  MX_I2C2_Init();
-  MX_SPI2_Init();
-  MX_TIM15_Init();
-  MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
   MX_TIM6_Init();
+  MX_TIM8_Init();
+  MX_TIM13_Init();
+  MX_TIM14_Init();
+  MX_TIM15_Init();
   MX_TIM16_Init();
   MX_TIM17_Init();
-  MX_SPI1_Init();
-  MX_TIM14_Init();
-  MX_TIM13_Init();
-  MX_SPI3_Init();
+  MX_USART1_UART_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   hardwareInit();
   softwareInit();
@@ -280,9 +309,9 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLM = 1;
-  RCC_OscInitStruct.PLL.PLLN = 100;
+  RCC_OscInitStruct.PLL.PLLN = 50;
   RCC_OscInitStruct.PLL.PLLP = 2;
-  RCC_OscInitStruct.PLL.PLLQ = 4;
+  RCC_OscInitStruct.PLL.PLLQ = 2;
   RCC_OscInitStruct.PLL.PLLR = 2;
   RCC_OscInitStruct.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
   RCC_OscInitStruct.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
@@ -299,7 +328,7 @@ void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_D3PCLK1|RCC_CLOCKTYPE_D1PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.SYSCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.AHBCLKDivider = RCC_HCLK_DIV1;
   RCC_ClkInitStruct.APB3CLKDivider = RCC_APB3_DIV2;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_APB1_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_APB2_DIV2;
@@ -339,10 +368,26 @@ void HAL_TIM_PWM_PulseFinishedCallback(TIM_HandleTypeDef *htim)
 
 void MPU_Config(void)
 {
+  MPU_Region_InitTypeDef MPU_InitStruct = {0};
 
   /* Disables the MPU */
   HAL_MPU_Disable();
 
+  /** Initializes and configures the Region and the memory to be protected
+  */
+  MPU_InitStruct.Enable = MPU_REGION_ENABLE;
+  MPU_InitStruct.Number = MPU_REGION_NUMBER0;
+  MPU_InitStruct.BaseAddress = 0x0;
+  MPU_InitStruct.Size = MPU_REGION_SIZE_4GB;
+  MPU_InitStruct.SubRegionDisable = 0x87;
+  MPU_InitStruct.TypeExtField = MPU_TEX_LEVEL0;
+  MPU_InitStruct.AccessPermission = MPU_REGION_NO_ACCESS;
+  MPU_InitStruct.DisableExec = MPU_INSTRUCTION_ACCESS_DISABLE;
+  MPU_InitStruct.IsShareable = MPU_ACCESS_SHAREABLE;
+  MPU_InitStruct.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
+  MPU_InitStruct.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
+
+  HAL_MPU_ConfigRegion(&MPU_InitStruct);
   /* Enables the MPU */
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 
@@ -361,43 +406,10 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   /* USER CODE BEGIN Callback 0 */
 	if(htim->Instance==htim6.Instance)
 	{
-    uint32_t adc_raw;
-    int32_t adc_code;
-
-    if (!cs5552_ready) {
-      return;
+    if ((cs5552SemHandle != NULL) && (osKernelRunning() == 1))
+    {
+      osSemaphoreRelease(cs5552SemHandle);
     }
-
-    CS5552_SelectChip(CS5552_CHIP_0);
-    if (CS5552_ReadReg(REG_CONV_DATA, &adc_raw)) {
-      uint32_t top3 = (adc_raw >> 29) & 0x7u;
-      if (CS5552_ParseConvData(adc_raw, 1u, &adc_code, NULL) &&
-          !(top3 == 0x2u || top3 == 0x3u || top3 == 0x4u || top3 == 0x5u ||
-            adc_raw == 0xFFFFFFFFu || adc_raw == 0xFFFFFFFEu || adc_raw == 0x0u)) {
-        ch0_valid_sample_count++;
-        {
-          int32_t adc_24bit = adc_code >> 6;
-          float voltage_mv = CS5552_ConvertToVoltage(adc_24bit, 64);
-          float voltage_filtered = Filter_Update(&voltage_filter_ch0, voltage_mv);
-          g_voltage_filtered_ch0 = voltage_filtered * 1000;
-          g_voltage_filtered_valid_ch0 = 1u;
-        }
-      } else {
-        ch0_invalid_sample_count++;
-        // printf("CH0 data Parse Error!\r\n");
-      }
-    } else {
-      // printf("CH0 Read Error!\r\n");
-    }
-
-    // if (++tim6SemReleaseCounter >= TIM6_SEM_RELEASE_10MS_COUNT)
-    // {
-    //   tim6SemReleaseCounter = 0u;
-    //   if((cs5552SemHandle != NULL) && (osKernelRunning() == 1))
-    //   {
-    //       osSemaphoreRelease(cs5552SemHandle);
-    //   }
-    // }
 	}
   //2kHz for encoder collecting
   if(htim->Instance == TIM16){
