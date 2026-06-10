@@ -80,6 +80,9 @@ void DI_map(HAL_DI_STRUCT *x);
 void DB9_map(HAL_DB9_STRUCT *x);
 void ServoIO_map(HAL_DI_STRUCT *x);
 void MD_CODE_map(uint8_t SensorMapNum[3]);
+static void MD_ResetEngineeringValue(MDSTRUCT *md);
+static uint8_t MD_SinglePointConfigReady(uint8_t connector);
+static void MD_UpdateEngineeringValue(MDSTRUCT *md, uint8_t connector, const sensorData_t *sensorData);
 /*DI Function map*/
 void DIFuncMap_init(void);
 void DIFunc_map(void);
@@ -123,7 +126,7 @@ void inputMapping(){
 	// CON ADJ monitor
 	sensorCON_ADJ_Monitor(&DB9);
 	// measure data code value mapping
-	MD_CODE_map(sensorCheck.MapNum);
+	// MD_CODE_map(sensorCheck.MapNum);
 	// sensor settare monitor
 	SetTareMonitor(&AL);
 	// pose calculate
@@ -230,24 +233,93 @@ void outputControl()
 /**
  * @brief ADC code map
  */
+static void MD_ResetEngineeringValue(MDSTRUCT *md)
+{
+	if (md == NULL)
+		return;
+
+	md->orig_last = md->orig;
+	md->orig = 0.0f;
+	md->origTare = 0.0f;
+}
+
+static uint8_t MD_SinglePointConfigReady(uint8_t connector)
+{
+	switch (connector)
+	{
+	case ch3Ext2:
+		return (AL.ext2Ctrl.NominalSensitive != 0.0f) && (AL.ext2Ctrl.NominalValue != 0.0f);
+	case ch4Load:
+		return (AL.loadCtrl.NominalSensitive != 0.0f) && (AL.loadCtrl.NominalValue != 0.0f);
+	default:
+		return 0u;
+	}
+}
+
+static void MD_UpdateEngineeringValue(MDSTRUCT *md, uint8_t connector, const sensorData_t *sensorData)
+{
+	if ((md == NULL) || (sensorData == NULL))
+		return;
+
+	md->orig_last = md->orig;
+
+	if ((sensorData->LinPoint > 0u) && (sensorCalibrate.multipointCalibrate != NULL))
+	{
+		sensorCalibrate.multipointCalibrate(md->code, connector, sensorData, &md->orig);
+		return;
+	}
+
+	if ((sensorCalibrate.singlepointCalibrate == NULL) || !MD_SinglePointConfigReady(connector))
+	{
+		md->orig = 0.0f;
+		md->origTare = 0.0f;
+		return;
+	}
+
+	sensorCalibrate.singlepointCalibrate(md->code, connector, sensorData, &md->orig);
+}
+
 void MD_CODE_map(uint8_t SensorMapNum[3])
 {
-	if (SensorMapNum[0] == SENSOR_NO_CHANNEL)
+	if (SensorMapNum == NULL)
+	{
 		force.code = 0;
-	else
-		force.code = cs5552_compat_ctx.Code[CS5552_COMPAT_CHANNEL_FORCE] - AL.tare.value[ch4Load];
+		strain1.code = 0;
+		strain2.code = 0;
+		MD_ResetEngineeringValue(&force);
+		MD_ResetEngineeringValue(&strain1);
+		MD_ResetEngineeringValue(&strain2);
+		return;
+	}
 
-		
+	if (SensorMapNum[0] == SENSOR_NO_CHANNEL)
+	{
+		force.code = 0;
+		MD_ResetEngineeringValue(&force);
+	}
+	else
+	{
+		force.code = cs5552_compat_ctx.Code[CS5552_COMPAT_CHANNEL_FORCE] - AL.tare.value[ch4Load];
+		MD_UpdateEngineeringValue(&force, ch4Load, &SenData[ch4Load]);
+	}
+
 	/*
 	 * Current CS5552 migration does not use chip0.ch0,
 	 * so strain1 is intentionally kept at zero for now.
 	 */
 	strain1.code = 0;
+	MD_ResetEngineeringValue(&strain1);
 
 	if (SensorMapNum[2] == SENSOR_NO_CHANNEL)
+	{
 		strain2.code = 0;
+		MD_ResetEngineeringValue(&strain2);
+	}
 	else
+	{
 		strain2.code = cs5552_compat_ctx.Code[CS5552_COMPAT_CHANNEL_STRAIN2] - AL.tare.value[ch3Ext2];
+		MD_UpdateEngineeringValue(&strain2, ch3Ext2, &SenData[ch3Ext2]);
+	}
 
 	//pose.code = encdr->count0;
 }
@@ -534,14 +606,8 @@ void poseSpeedFilter_Int(FILTER_INT *_filter,MDSTRUCT *_pose,MDSTRUCT *_speedPos
  */
 void loadCalcu(MDSTRUCT *force, APP_LAYER_VARIABLE_STRUCT *AL)
 {
-	force->orig_last = force->orig;
-	//1000.0f is usage of NominalValue kN -> N
-	//force->orig = AL->loadCtrl.sign * 1000.0f * ADC_FACTOR * (force->code - AL->tare.value[4]) / AL->loadCtrl.NominalSensitive * AL->loadCtrl.NominalValue;
-	if(SenData[ch4Load].LinPoint > 0){
-		sensorCalibrate.multipointCalibrate(force->code,ch4Load,&SenData[ch4Load],&force->orig);
-	}else{
-		sensorCalibrate.singlepointCalibrate(force->code,ch4Load,&SenData[ch4Load],&force->orig);
-	}
+	(void)AL;
+	MD_UpdateEngineeringValue(force, ch4Load, &SenData[ch4Load]);
 }
 
 /**
@@ -895,14 +961,8 @@ void extensometerFilterWithLenSwitch(MDSTRUCT *_x,MDSTRUCT *_xLsm ,
  */
 void extensometer2Calcu(MDSTRUCT *_strain, APP_LAYER_VARIABLE_STRUCT *_AL)
 {
-	_strain->orig_last = _strain->orig;
-	// ADC_FACTOR_ROUND: ADC code -> engineering value scaling factor
-	//_strain->orig = _AL->ext1Ctrl.sign * (_strain->code - _AL->tare.value[2]) * ADC_FACTOR / _AL->ext1Ctrl.NominalSensitive * _AL->ext1Ctrl.NominalValue;
-	if(SenData[ch3Ext2].LinPoint > 0){
-		sensorCalibrate.multipointCalibrate(_strain->code,ch3Ext2,&SenData[ch3Ext2],&_strain->orig);
-	}
-	else
-		sensorCalibrate.singlepointCalibrate(_strain->code,ch3Ext2,&SenData[ch3Ext2],&_strain->orig);
+	(void)_AL;
+	MD_UpdateEngineeringValue(_strain, ch3Ext2, &SenData[ch3Ext2]);
 }
 
 /**

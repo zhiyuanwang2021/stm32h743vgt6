@@ -276,6 +276,7 @@ void StartDefaultTask(void const * argument)
           // HAL_GPIO_WritePin(P_ADCCS1_GPIO_Port, P_ADCCS1_Pin, GPIO_PIN_SET);
           
           CS5552_Tim6SampleAndFilter();
+          MD_CODE_map(sensorCheck.MapNum);
           // HAL_GPIO_WritePin(P_ADCCS1_GPIO_Port, P_ADCCS1_Pin, GPIO_PIN_RESET);
           // taskEXIT_CRITICAL();
           tim6SignalCounter++;

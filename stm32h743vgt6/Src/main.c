@@ -107,8 +107,7 @@ void CS5552_Tim6SampleAndFilter(void)
           adc_raw == 0xFFFFFFFFu || adc_raw == 0xFFFFFFFEu || adc_raw == 0x0u)) {
       ch0_valid_sample_count++;
       {
-        int32_t adc_24bit = adc_code >> 6;
-        float voltage_mv = CS5552_ConvertToVoltage(adc_24bit, 64);
+        float voltage_mv = CS5552_ConvertToVoltage(adc_code, 128);
         float voltage_filtered = Filter_Update(&voltage_filter_ch0, voltage_mv);
         g_voltage_filtered_ch0 = voltage_filtered * 1000;
         g_voltage_filtered_valid_ch0 = 1u;
@@ -254,6 +253,7 @@ int main(void)
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
+  printf("System Clock:%lu Hz\r\n", HAL_RCC_GetSysClockFreq());
   hardwareInit();
   softwareInit();
   HAL_TIM_Base_Start(&htim13);

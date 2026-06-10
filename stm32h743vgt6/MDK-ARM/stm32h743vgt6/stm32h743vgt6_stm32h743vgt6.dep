@@ -1,6 +1,6 @@
 Dependencies for Project 'stm32h743vgt6', Target 'stm32h743vgt6': (DO NOT MODIFY !)
 CompilerVersion: 5060960::V5.06 update 7 (build 960)::.\ARMCC
-F (../Src/main.c)(0x6A26C0BA)(--c99 -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Host -I ../Hardware -I ../Ethenet -I ../Ethenet/W5500 -I ../Ethenet/bsp -I ../ADRC -I ../Regression -I ../PID -I ../Easylogger/inc -I ../Hardware/MRAM -I ../ModbusLib/include -I ../Drivers/CMSIS/Include-I.\RTE\_stm32h743vgt6-IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="534" -D_RTE_ -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_PWR_LDO_SUPPLY-o stm32h743vgt6\main.o --depend stm32h743vgt6\main.d)
+F (../Src/main.c)(0x6A26CFD0)(--c99 -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Host -I ../Hardware -I ../Ethenet -I ../Ethenet/W5500 -I ../Ethenet/bsp -I ../ADRC -I ../Regression -I ../PID -I ../Easylogger/inc -I ../Hardware/MRAM -I ../ModbusLib/include -I ../Drivers/CMSIS/Include-I.\RTE\_stm32h743vgt6-IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="534" -D_RTE_ -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_PWR_LDO_SUPPLY-o stm32h743vgt6\main.o --depend stm32h743vgt6\main.d)
 I (../Inc/main.h)(0x6A26B764)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69DF4263)
 I (../Inc/stm32h7xx_hal_conf.h)(0x6A26BF19)
@@ -77,7 +77,7 @@ I (../Hardware/myFifo.h)(0x6552FCCA)
 I (../Hardware/Encoder.h)(0x664C4FA3)
 I (../Host/Eeprom_manage.h)(0x6A0C6BF7)
 I (../Hardware/EEPROM.h)(0x663AEDBD)
-I (../Host/in_out.h)(0x6A0C74BC)
+I (../Host/in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Hardware/DI.h)(0x67C99330)
 I (../Host/sensor.h)(0x6A13C205)
@@ -133,7 +133,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h)(0x69DF4263)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h)(0x69DF4263)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x69DF4263)
 I (D:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x5E8E3CC2)
-F (../Src/freertos.c)(0x6A26CA61)(--c99 -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Host -I ../Hardware -I ../Ethenet -I ../Ethenet/W5500 -I ../Ethenet/bsp -I ../ADRC -I ../Regression -I ../PID -I ../Easylogger/inc -I ../Hardware/MRAM -I ../ModbusLib/include -I ../Drivers/CMSIS/Include-I.\RTE\_stm32h743vgt6-IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="534" -D_RTE_ -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_PWR_LDO_SUPPLY-o stm32h743vgt6\freertos.o --depend stm32h743vgt6\freertos.d)
+F (../Src/freertos.c)(0x6A26CC9E)(--c99 -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Host -I ../Hardware -I ../Ethenet -I ../Ethenet/W5500 -I ../Ethenet/bsp -I ../ADRC -I ../Regression -I ../PID -I ../Easylogger/inc -I ../Hardware/MRAM -I ../ModbusLib/include -I ../Drivers/CMSIS/Include-I.\RTE\_stm32h743vgt6-IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="534" -D_RTE_ -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_PWR_LDO_SUPPLY-o stm32h743vgt6\freertos.o --depend stm32h743vgt6\freertos.d)
 I (../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h)(0x69DF4190)
 I (D:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5E8E3CC2)
 I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5E8E3CC2)
@@ -189,7 +189,7 @@ I (../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h)(0x69DF4190)
 I (../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h)(0x69DF4190)
 I (../Inc/tim.h)(0x67C06C2D)
 I (../Host/control.h)(0x6A0C74D6)
-I (../Host/in_out.h)(0x6A0C74BC)
+I (../Host/in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Inc/gpio.h)(0x6A2638B7)
 I (../Hardware/DI.h)(0x67C99330)
@@ -595,7 +595,7 @@ I (../Hardware/myFifo.h)(0x6552FCCA)
 I (../Hardware/Encoder.h)(0x664C4FA3)
 I (../Inc/tim.h)(0x67C06C2D)
 I (../Regression/lsm.h)(0x6A0C6BEB)
-I (..\Host\in_out.h)(0x6A0C74BC)
+I (..\Host\in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Inc/gpio.h)(0x6A2638B7)
 I (../Hardware/DI.h)(0x67C99330)
@@ -606,8 +606,8 @@ I (../Hardware/EEPROM.h)(0x663AEDBD)
 I (../Inc/i2c.h)(0x6A2638BA)
 I (../Easylogger/inc/elog.h)(0x66CD4112)
 I (../Easylogger/inc/elog_cfg.h)(0x6A218FC0)
-F (..\Host\in_out.c)(0x6A2128DC)(--c99 -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Host -I ../Hardware -I ../Ethenet -I ../Ethenet/W5500 -I ../Ethenet/bsp -I ../ADRC -I ../Regression -I ../PID -I ../Easylogger/inc -I ../Hardware/MRAM -I ../ModbusLib/include -I ../Drivers/CMSIS/Include-I.\RTE\_stm32h743vgt6-IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="534" -D_RTE_ -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_PWR_LDO_SUPPLY-o stm32h743vgt6\in_out.o --depend stm32h743vgt6\in_out.d)
-I (..\Host\in_out.h)(0x6A0C74BC)
+F (..\Host\in_out.c)(0x6A26CEB0)(--c99 -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Host -I ../Hardware -I ../Ethenet -I ../Ethenet/W5500 -I ../Ethenet/bsp -I ../ADRC -I ../Regression -I ../PID -I ../Easylogger/inc -I ../Hardware/MRAM -I ../ModbusLib/include -I ../Drivers/CMSIS/Include-I.\RTE\_stm32h743vgt6-IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="534" -D_RTE_ -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_PWR_LDO_SUPPLY-o stm32h743vgt6\in_out.o --depend stm32h743vgt6\in_out.d)
+I (..\Host\in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69DF4263)
 I (../Inc/stm32h7xx_hal_conf.h)(0x6A26BF19)
@@ -848,7 +848,7 @@ I (../Hardware/adc_scale.h)(0x6A13BB1A)
 I (../Hardware/DI.h)(0x67C99330)
 I (../Inc/gpio.h)(0x6A2638B7)
 I (../Hardware/DO.h)(0x662E6794)
-I (..\Host\in_out.h)(0x6A0C74BC)
+I (..\Host\in_out.h)(0x6A26CEB0)
 I (../Hardware/CS5552.h)(0x6A2195B5)
 I (../Inc/i2c.h)(0x6A2638BA)
 I (../Inc/tim.h)(0x67C06C2D)
@@ -910,7 +910,7 @@ I (../Ethenet/loopback.h)(0x65313B2C)
 I (../Hardware/CRC16.h)(0x6525066F)
 I (../Hardware/myFifo.h)(0x6552FCCA)
 I (D:\Keil_v5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
-I (..\Host\in_out.h)(0x6A0C74BC)
+I (..\Host\in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Inc/gpio.h)(0x6A2638B7)
 I (../Hardware/DI.h)(0x67C99330)
@@ -1061,7 +1061,7 @@ I (../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h)(0x69DF4190)
 I (../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h)(0x69DF4190)
 I (../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h)(0x69DF4190)
 I (../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h)(0x69DF4190)
-I (..\Host\in_out.h)(0x6A0C74BC)
+I (..\Host\in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Inc/gpio.h)(0x6A2638B7)
 I (../Hardware/DI.h)(0x67C99330)
@@ -1070,7 +1070,7 @@ I (../Easylogger/inc/elog.h)(0x66CD4112)
 I (../Easylogger/inc/elog_cfg.h)(0x6A218FC0)
 F (..\Host\Eeprom_manage.h)(0x6A0C6BF7)()
 F (..\Host\userdebug.c)(0x6A2128DC)(--c99 -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Host -I ../Hardware -I ../Ethenet -I ../Ethenet/W5500 -I ../Ethenet/bsp -I ../ADRC -I ../Regression -I ../PID -I ../Easylogger/inc -I ../Hardware/MRAM -I ../ModbusLib/include -I ../Drivers/CMSIS/Include-I.\RTE\_stm32h743vgt6-IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="534" -D_RTE_ -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_PWR_LDO_SUPPLY-o stm32h743vgt6\userdebug.o --depend stm32h743vgt6\userdebug.d)
-I (..\Host\in_out.h)(0x6A0C74BC)
+I (..\Host\in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69DF4263)
 I (../Inc/stm32h7xx_hal_conf.h)(0x6A26BF19)
@@ -1203,7 +1203,7 @@ I (../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h)(0x69DF4190
 I (../Easylogger/inc/elog.h)(0x66CD4112)
 I (../Easylogger/inc/elog_cfg.h)(0x6A218FC0)
 I (..\Host\Eeprom_manage.h)(0x6A0C6BF7)
-I (..\Host\in_out.h)(0x6A0C74BC)
+I (..\Host\in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Hardware/adc_scale.h)(0x6A13BB1A)
 F (..\Host\sensor.h)(0x6A13C205)()
@@ -1251,7 +1251,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x69DF4263)
 I (D:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x5E8E3CC2)
 I (..\Host\gParameter.h)(0x6A0DB1D6)
 I (..\Host\posGenerator.h)(0x672CC179)
-I (..\Host\in_out.h)(0x6A0C74BC)
+I (..\Host\in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Inc/gpio.h)(0x6A2638B7)
 I (../Hardware/DI.h)(0x67C99330)
@@ -1320,7 +1320,7 @@ I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_tim_ex.h)(0x69DF4263)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart.h)(0x69DF4263)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal_uart_ex.h)(0x69DF4263)
 I (D:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x5E8E3CC2)
-I (../Host/in_out.h)(0x6A0C74BC)
+I (../Host/in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Inc/gpio.h)(0x6A2638B7)
 I (../Hardware/DI.h)(0x67C99330)
@@ -1536,7 +1536,7 @@ I (D:\Keil_v5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
 I (..\Hardware\CRC16.h)(0x6525066F)
 I (../Easylogger/inc/elog.h)(0x66CD4112)
 I (../Easylogger/inc/elog_cfg.h)(0x6A218FC0)
-I (../Host/in_out.h)(0x6A0C74BC)
+I (../Host/in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Inc/gpio.h)(0x6A2638B7)
 I (../Hardware/DI.h)(0x67C99330)
@@ -1675,7 +1675,7 @@ I (../Host/gParameter.h)(0x6A0DB1D6)
 I (../Host/posGenerator.h)(0x672CC179)
 I (../Easylogger/inc/elog.h)(0x66CD4112)
 I (../Easylogger/inc/elog_cfg.h)(0x6A218FC0)
-I (../Host/in_out.h)(0x6A0C74BC)
+I (../Host/in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Hardware/DI.h)(0x67C99330)
 F (..\Hardware\myFifo.c)(0x6A0C6D8C)(--c99 -c --cpu Cortex-M7.fp.dp -D__MICROLIB -g -O3 --apcs=interwork --split_sections -I ../Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc -I ../Drivers/STM32H7xx_HAL_Driver/Inc/Legacy -I ../Drivers/CMSIS/Device/ST/STM32H7xx/Include -I ../Middlewares/Third_Party/FreeRTOS/Source/include -I ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS -I ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM4F -I ../Host -I ../Hardware -I ../Ethenet -I ../Ethenet/W5500 -I ../Ethenet/bsp -I ../ADRC -I ../Regression -I ../PID -I ../Easylogger/inc -I ../Hardware/MRAM -I ../ModbusLib/include -I ../Drivers/CMSIS/Include-I.\RTE\_stm32h743vgt6-IC:\Users\10331\AppData\Local\Arm\Packs\ARM\CMSIS\6.2.0\CMSIS\Core\Include-D__UVISION_VERSION="534" -D_RTE_ -DSTM32H743xx -D_RTE_ -DUSE_HAL_DRIVER -DSTM32H743xx -DUSE_PWR_LDO_SUPPLY-o stm32h743vgt6\myfifo.o --depend stm32h743vgt6\myfifo.d)
@@ -3164,7 +3164,7 @@ I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5E8E3CC2)
 I (../Host/gParameter.h)(0x6A0DB1D6)
 I (../Host/posGenerator.h)(0x672CC179)
 I (D:\Keil_v5\ARM\ARMCC\include\math.h)(0x5E8E3CC2)
-I (../Host/in_out.h)(0x6A0C74BC)
+I (../Host/in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69DF4263)
 I (../Inc/stm32h7xx_hal_conf.h)(0x6A26BF19)
@@ -3362,7 +3362,7 @@ I (D:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5E8E3CC2)
 I (D:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5E8E3CC2)
 I (D:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x5E8E3CC2)
 I (D:\Keil_v5\ARM\ARMCC\include\string.h)(0x5E8E3CC2)
-I (../Host/in_out.h)(0x6A0C74BC)
+I (../Host/in_out.h)(0x6A26CEB0)
 I (../Hardware/DO.h)(0x662E6794)
 I (../Drivers/STM32H7xx_HAL_Driver/Inc/stm32h7xx_hal.h)(0x69DF4263)
 I (../Inc/stm32h7xx_hal_conf.h)(0x6A26BF19)

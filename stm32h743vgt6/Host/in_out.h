@@ -75,6 +75,7 @@ void outputMapping(void);
 void outputControl(void);
 void output_param_update(void);
 void poseCalcu(void);
+void MD_CODE_map(uint8_t SensorMapNum[3]);
 
 void manualBoxInit(void);
 void manualBoxTypeMonitor(MANUAL_BOX_STRUCT *_manualBox);

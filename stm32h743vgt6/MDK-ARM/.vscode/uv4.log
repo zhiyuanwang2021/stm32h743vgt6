@@ -1,3 +1,5 @@
-Load "stm32h743vgt6\\stm32h743vgt6.axf" 
-Erase Done.Programming Done.Verify OK.Application running ...
-Flash Load finished at 22:00:29
+*** Using Compiler 'V5.06 update 7 (build 960)', folder: 'D:\Keil_v5\ARM\ARMCC\Bin'
+Build target 'stm32h743vgt6'
+After Build - User command #1: "D:\Keil_v5\\ARM\ARMCC\bin\fromelf.exe" --bin --output="c:\Users\10331\Desktop\new\stm32h743vgt6\MDK-ARM\stm32h743vgt6.bin" "stm32h743vgt6\stm32h743vgt6.axf"
+"stm32h743vgt6\stm32h743vgt6.axf" - 0 Error(s), 0 Warning(s).
+Build Time Elapsed:  00:00:03
