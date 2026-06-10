@@ -54,8 +54,6 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
-void CS5552_Tim6SampleAndFilter(void);
-
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
@@ -109,8 +107,6 @@ void CS5552_Tim6SampleAndFilter(void);
 #define P_CON1_GPIO_Port GPIOE
 #define P_ADJ1_Pin GPIO_PIN_14
 #define P_ADJ1_GPIO_Port GPIOE
-#define P_DAC_CS_Pin GPIO_PIN_12
-#define P_DAC_CS_GPIO_Port GPIOB
 #define P_DAC_SCLK_Pin GPIO_PIN_13
 #define P_DAC_SCLK_GPIO_Port GPIOB
 #define P_DAC_SDI_Pin GPIO_PIN_15

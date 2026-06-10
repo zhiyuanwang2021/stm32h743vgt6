@@ -227,6 +227,10 @@ void CS5552_CS_HIGH(void);
 
 extern uint32_t raw;
 extern bool cs5552_ready;
+extern volatile float g_voltage_filtered_ch0;
+extern volatile uint8_t g_voltage_filtered_valid_ch0;
+extern volatile uint32_t ch0_valid_sample_count;
+extern volatile uint32_t ch0_invalid_sample_count;
 bool CS5552_CompatDualInit(void);
 bool CS5552_ReadChipContDataNonBlocking(uint8_t chip, uint8_t pga_gain, int32_t *out_data, float *out_voltage);
 bool CS5552_ParseConvData(uint32_t raw_data, uint8_t expected_channel, int32_t *out_data, uint8_t *out_channel);
@@ -247,6 +251,7 @@ bool CS5552_ReadADC_Single(uint8_t conv_conf_idx, int32_t *out_data);
 bool CS5552_Offset_SelfCalibration(uint8_t conv_conf_idx);
 
 bool CS5552_StartContConv(uint8_t conv_conf_idx);
+void CS5552_Tim6SampleAndFilter(void);
 
 float CS5552_ConvertToVoltage(int32_t raw_code, uint8_t pga_gain);
 

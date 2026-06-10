@@ -29,7 +29,6 @@
 "stm32h743vgt6\crc16.o"
 "stm32h743vgt6\servo_driver.o"
 "stm32h743vgt6\myfifo.o"
-"stm32h743vgt6\dac8831.o"
 "stm32h743vgt6\encoder.o"
 "stm32h743vgt6\eeprom.o"
 "stm32h743vgt6\mram.o"

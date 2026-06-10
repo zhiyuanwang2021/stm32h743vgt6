@@ -28,7 +28,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "RS485.h"
-#include "DAC8831.h"
 #include "ETHw5500.h"
 #include "Servo_Driver.h"
 #include "myFifo.h"
@@ -70,11 +69,6 @@
 
 /* USER CODE BEGIN PV */
 uint8_t test_check = 0;
-static SlidingAvgFilter voltage_filter_ch0;
-volatile float g_voltage_filtered_ch0 = 0.0f;
-volatile uint8_t g_voltage_filtered_valid_ch0 = 0u;
-volatile uint32_t ch0_valid_sample_count = 0u;
-volatile uint32_t ch0_invalid_sample_count = 0u;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,42 +84,9 @@ extern volatile uint8_t tim6PrintFlag;
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void CS5552_Tim6SampleAndFilter(void)
-{
-  uint32_t adc_raw;
-  int32_t adc_code;
-
-  if (!cs5552_ready) {
-    return;
-  }
-
-  CS5552_SelectChip(CS5552_CHIP_0);
-  if (CS5552_ReadReg(REG_CONV_DATA, &adc_raw)) {
-    uint32_t top3 = (adc_raw >> 29) & 0x7u;
-    if (CS5552_ParseConvData(adc_raw, 1u, &adc_code, NULL) &&
-        !(top3 == 0x2u || top3 == 0x3u || top3 == 0x4u || top3 == 0x5u ||
-          adc_raw == 0xFFFFFFFFu || adc_raw == 0xFFFFFFFEu || adc_raw == 0x0u)) {
-      ch0_valid_sample_count++;
-      {
-        float voltage_mv = CS5552_ConvertToVoltage(adc_code, 128);
-        float voltage_filtered = Filter_Update(&voltage_filter_ch0, voltage_mv);
-        g_voltage_filtered_ch0 = voltage_filtered * 1000;
-        g_voltage_filtered_valid_ch0 = 1u;
-      }
-    } else {
-      
-    }
-  } else {
-    ch0_invalid_sample_count++;
-    // printf("CH0 Read Error!\r\n");
-  }
-}
-
 /* Fun_111 */
 void hardwareInit(void){
   //HAL_TIM_PWM_Start_IT(&htim8,TIM_CHANNEL_1);
-  //SPI2 CS init
-  DAC8831_CS_HIGH();
   MRAM_CS_HIGH();
   //Servo init
   modFclkNumberPULSEInit(1000);
@@ -135,14 +96,11 @@ void hardwareInit(void){
 #else
 	Servo_DIR_GPIO_Init();
 #endif
-  //DAC init
-  DAC8831_Write(0);
   //485 init
   modbusInit();
   RS485_init(&huart2);
   // ADC init
   CS5552_CompatInit(&cs5552_compat_ctx);
-  Filter_Init(&voltage_filter_ch0);
   //Eth fifo init
 	fifo_init(&rev_fifo);
   //Encoder init

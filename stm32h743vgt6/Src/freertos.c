@@ -248,9 +248,6 @@ void MX_FREERTOS_Init(void) {
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
-extern volatile float g_voltage_filtered_ch0;
-extern volatile uint32_t ch0_valid_sample_count;
-extern volatile uint32_t ch0_invalid_sample_count;
 /**
   * @brief  Function implementing the defaultTask thread.
   * @param  argument: Not used

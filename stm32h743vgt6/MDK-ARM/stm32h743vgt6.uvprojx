@@ -696,11 +696,6 @@
               <FilePath>..\Hardware\myFifo.c</FilePath>
             </File>
             <File>
-              <FileName>DAC8831.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Hardware\DAC8831.c</FilePath>
-            </File>
-            <File>
               <FileName>Encoder.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\Encoder.c</FilePath>

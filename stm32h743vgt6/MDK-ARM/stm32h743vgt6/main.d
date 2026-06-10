@@ -63,7 +63,6 @@ stm32h743vgt6\main.o: ../Hardware/RS485.h
 stm32h743vgt6\main.o: ../Host/gParameter.h
 stm32h743vgt6\main.o: ../Host/posGenerator.h
 stm32h743vgt6\main.o: ../Inc/gpio.h
-stm32h743vgt6\main.o: ../Hardware/DAC8831.h
 stm32h743vgt6\main.o: ../Ethenet/ETHw5500.h
 stm32h743vgt6\main.o: ../Ethenet/bsp/types.h
 stm32h743vgt6\main.o: ../Ethenet/socket.h

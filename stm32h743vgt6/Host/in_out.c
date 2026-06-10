@@ -6,7 +6,6 @@
 #include "adc_scale.h"
 #include "cmsis_os.h"
 #include "Servo_driver.h"
-#include "DAC8831.h"
 #include "Encoder.h"
 #include "control.h"
 #include "gParameter.h"
@@ -213,8 +212,6 @@ void outputControl()
 		Servo_PWM_Disable(PULSE);
 		// hal_output.DO.SON = 0;
 	}
-	// DAC output
-	DAC8831_Write(hal_output.AO);
 	// SRV DIR
 	(hal_output.DO.DIR == 1) ? DIR_SET : DIR_RESET;
 	// SRV ENBALE
@@ -1212,7 +1209,7 @@ void openloopOutputMap(OUTPUTPARA *op)
 		hal_output.DO.DIR = (GPIO_PinState)!DO.DIR; // 鍙嶈浆
 		hal_output.PWM = -AL.openloopFrq;
 	}
-	hal_output.AO = AL.openloopAO * 1000;
+	hal_output.AO = 0;
 }
 
 /**
@@ -1380,26 +1377,10 @@ void closeloopOutputMap(OUTPUTPARA *op)
 
 		break;
 	case SGINAL_ANALOGUE:
-		switch (AL.movectrl)
-		{
-		case POS_MODE:
-			outputSignalProcess(&svAO.pos, &OutputPara);
-			AL.AOforProtect = svAO.pos;
-			hal_output.AO = svAO.pos*1000.0f;
-			break;
-		case LOAD_MODE:
-			outputSignalProcess(&svAO.load, &OutputPara);
-			AL.AOforProtect = svAO.load;
-			hal_output.AO = svAO.load*1000.0f;
-			break;
-		case EXTEN_MODE:
-			outputSignalProcess(&svAO.ext, &OutputPara);
-			AL.AOforProtect = svAO.ext;
-			hal_output.AO = svAO.ext*1000.0f;
-			break;
-		default:
-			break;
-		}
+		AL.svPWMforProtect = 0;
+		AL.AOforProtect = 0;
+		hal_output.PWM = 0;
+		hal_output.AO = 0;
 		break;
 	case SGINAL_DC_MOTOR:
 

@@ -7,6 +7,11 @@ static uint32_t s_us_ticks = 0;
 uint32_t raw = 0;
 bool cs5552_ready = false;
 cs5530_t cs5530;
+static SlidingAvgFilter voltage_filter_ch0;
+volatile float g_voltage_filtered_ch0 = 0.0f;
+volatile uint8_t g_voltage_filtered_valid_ch0 = 0u;
+volatile uint32_t ch0_valid_sample_count = 0u;
+volatile uint32_t ch0_invalid_sample_count = 0u;
 
 /* 多芯片片选管理 */
 static uint8_t  cs5552_chip = 0;
@@ -647,8 +652,39 @@ void CS5552_CompatInit(cs5552_compat_t *compat_ctx)
     CS5552_CompatClearData(compat_ctx);
 
     cs5552_ready = CS5552_CompatDualInit();
+    Filter_Init(&voltage_filter_ch0);
     compat_ctx->runState = cs5552_ready ? cs5530RunNormal : cs5530RunAbnormal;
     // printf("CS5552 Compatibility Init %s\r\n", cs5552_ready ? "Success" : "Failed");
+}
+
+void CS5552_Tim6SampleAndFilter(void)
+{
+    uint32_t adc_raw;
+    int32_t adc_code;
+
+    if (!cs5552_ready) {
+        return;
+    }
+
+    CS5552_SelectChip(CS5552_CHIP_0);
+    if (CS5552_ReadReg(REG_CONV_DATA, &adc_raw)) {
+        uint32_t top3 = (adc_raw >> 29) & 0x7u;
+
+        if (CS5552_ParseConvData(adc_raw, 1u, &adc_code, NULL) &&
+            !(top3 == 0x2u || top3 == 0x3u || top3 == 0x4u || top3 == 0x5u ||
+              adc_raw == 0xFFFFFFFFu || adc_raw == 0xFFFFFFFEu || adc_raw == 0x0u)) {
+            float voltage_mv = CS5552_ConvertToVoltage(adc_code, 128);
+            float voltage_filtered;
+
+            ch0_valid_sample_count++;
+            voltage_filtered = Filter_Update(&voltage_filter_ch0, voltage_mv);
+            g_voltage_filtered_ch0 = voltage_filtered * 1000;
+            g_voltage_filtered_valid_ch0 = 1u;
+        }
+    } else {
+        ch0_invalid_sample_count++;
+        // printf("CH0 Read Error!\r\n");
+    }
 }
 
 void CS5552_CompatDataGet(cs5552_compat_t *compat_ctx)

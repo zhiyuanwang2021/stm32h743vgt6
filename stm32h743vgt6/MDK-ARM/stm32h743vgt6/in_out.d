@@ -66,8 +66,6 @@ stm32h743vgt6\in_out.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/queue
 stm32h743vgt6\in_out.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/semphr.h
 stm32h743vgt6\in_out.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 stm32h743vgt6\in_out.o: ../Hardware/Servo_driver.h
-stm32h743vgt6\in_out.o: ../Hardware/DAC8831.h
-stm32h743vgt6\in_out.o: ../Inc/spi.h
 stm32h743vgt6\in_out.o: ../Hardware/Encoder.h
 stm32h743vgt6\in_out.o: ..\Host\control.h
 stm32h743vgt6\in_out.o: ..\Host\communicate.h
@@ -79,6 +77,7 @@ stm32h743vgt6\in_out.o: ../Ethenet/wizchip_conf.h
 stm32h743vgt6\in_out.o: ../Ethenet/W5500/w5500.h
 stm32h743vgt6\in_out.o: ../Ethenet/wizchip_conf.h
 stm32h743vgt6\in_out.o: ../Ethenet/bsp/bsp_spi.h
+stm32h743vgt6\in_out.o: ../Inc/spi.h
 stm32h743vgt6\in_out.o: ../Ethenet/loopback.h
 stm32h743vgt6\in_out.o: ../Hardware/CRC16.h
 stm32h743vgt6\in_out.o: ../Hardware/myFifo.h
