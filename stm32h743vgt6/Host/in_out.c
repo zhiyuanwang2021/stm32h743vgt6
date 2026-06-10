@@ -503,11 +503,13 @@ void SetTareMonitor(APP_LAYER_VARIABLE_STRUCT *p)
  */
 void poseCalcu(void){
 	pose.orig_last = pose.orig;
-	//pose.orig = AL.posCtrl.sign * pose.code * AL.posCtrl.NominalSensitive; // calculate encoder0 movement pulse
+	// Convert encoder code into engineering position using the active sensor calibration.
 	if(SenData[ch0Pose].LinPoint > 0){
+		// Use the stored multi-point calibration curve when available.
 		sensorCalibrate.multipointCalibrate(pose.code,ch0Pose,&SenData[ch0Pose],&pose.orig);
 	}
 	else
+		// Fall back to single-point sensitivity conversion.
 		sensorCalibrate.singlepointCalibrate(pose.code,ch0Pose,&SenData[ch0Pose],&pose.orig);
 }
 
@@ -588,9 +590,13 @@ void poseSpeedFilter_Int(FILTER_INT *_filter,MDSTRUCT *_pose,MDSTRUCT *_speedPos
 	_speedPose->code_last = _speedPose->code;
 	if (++i >= _filter_depth)
 		i = 0;
+	// Remove the oldest sample from the moving-sum buffer.
 	_filter->speed_temp -= _filter->speed_buf[i];
-	_filter->speed_buf[i] = _pose->codeErr * 2000; // 璁＄畻閫熷害 r/s  in 2k
+	// Convert encoder delta-per-sample into code-per-second at the 2 kHz ISR rate.
+	_filter->speed_buf[i] = _pose->codeErr * 2000;
+	// Add the newest sample back into the moving sum.
 	_filter->speed_temp += _filter->speed_buf[i];
+	// Keep the latest instantaneous speed code for upper-layer conversion.
 	_speedPose->code = _filter->speed_buf[i];
 }
 

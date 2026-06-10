@@ -645,27 +645,48 @@ void sensorConnectCheckByEeprom(HAL_DB9_STRUCT *_Db9){
 }
 
 /**
- * @brief Performs multi-point calibration based on the given ADC code and sensor data.
- * 
- * This function takes an ADC code, a pointer to a sensor data structure, and a pointer to the original value.
- * It calculates the calibrated original value based on the sensor data's linearization points.
- * 
- * @param[in] _code The ADC code to be calibrated.
- * @param[in] _connector The connector type.
- * @param[in] _senData A pointer to the sensor data structure containing calibration parameters.
- * @param[in,out] _orig A pointer to the variable storing the calibrated original value.
- * 
- * @return The calibrated original value.
+ * @brief 多点标定换算：将采样码值转换为工程量。
+ *
+ * @details
+ * 该函数使用 `sensorData_t` 中的线性化表 `LinV[]` 完成“码值 -> 工程值”的分段线性换算。
+ * 当 `LinPoint > 0` 时，上层会优先调用本函数，而不是单点灵敏度公式。
+ *
+ * 多点标定表中每个点包含三项：
+ * 1. `ADCCode`：该段参考码值 m
+ * 2. `RefValue`：该码值对应的参考工程值 n
+ * 3. `CorrectionFactor`：该段斜率 k
+ *
+ * 本函数的核心公式为：
+ * `orig = (code - m) * k + n`
+ *
+ * 处理流程分为三步：
+ * 1. 根据输入 `_code` 在 `LinV[]` 中找到应使用的分段参考点
+ * 2. 使用分段线性公式计算出原始工程值
+ * 3. 按通道类型补充方向符号、tare 去皮和缓存量更新
+ *
+ * 对不同通道的后处理规则：
+ * - `ch0Pose`：只应用位置方向 `AL.posCtrl.sign`
+ * - `ch2Ext1/ch3Ext2/ch4Load`：先保存 `origTare`，再减去 `AL.tare.fValue[]`
+ * - `ch1Bd`：当前没有额外后处理
+ *
+ * @param[in] _code       当前采样得到的原始码值
+ * @param[in] _connector  通道号，决定后续符号和 tare 处理方式
+ * @param[in] _senData    当前通道的传感器标定参数和线性化表
+ * @param[out] _orig      输出工程值
+ *
+ * @return 返回换算后的工程值 `*_orig`
  */
 static float multipointCalibrateFunc( 	const int32_t _code,
 										const uint8_t _connector,
 										const sensorData_t *_senData,
 										float *_orig){
 	uint8_t index;
-	int8_t signFactor = (_senData->LinV[0].CorrectionFactor < 0.0f ? 1 : 0);//0 represent positive,1 represent negative
+	// 根据首段斜率的正负，决定后续表查找的比较方向。
+	int8_t signFactor = (_senData->LinV[0].CorrectionFactor < 0.0f ? 1 : 0);
 	int32_t m;
-	float n,k;//(m,n),k
+	float n,k;
 	if(signFactor == 0){
+		// 斜率为正时，找到第一个满足 code <= ADCCode 的分段点。
 		for(index = 0;index<_senData->LinPoint;index++){
 			if(_code <= _senData->LinV[index].ADCCode){
 				m = _senData->LinV[index].ADCCode;//x-coordinate
@@ -680,6 +701,7 @@ static float multipointCalibrateFunc( 	const int32_t _code,
 			k = _senData->LinV[_senData->LinPoint-1].CorrectionFactor;//slope
 		}
 	}else{
+		// 斜率为负时，查找方向相反，找到第一个满足 code > ADCCode 的分段点。
 		for(index = 0;index<_senData->LinPoint;index++){
 			if(_code > _senData->LinV[index].ADCCode){
 				m = _senData->LinV[index].ADCCode;//x-coordinate
@@ -695,17 +717,20 @@ static float multipointCalibrateFunc( 	const int32_t _code,
 		}
 	}
 
+	// 使用当前分段的参考点和斜率做一次分段线性换算。
 	*_orig = (float)(_code - m)*k + n;
 
 	switch (_connector)
 	{
 	case ch0Pose:
+		// 位置通道只做方向修正，不做 tare 去皮。
 		*_orig = AL.posCtrl.sign * *_orig;
 		break;
 	case ch1Bd:
 		
 		break;
 	case ch2Ext1:
+		// 先保留带方向但未去皮的原值，再减去浮点 tare。
 		strain1.origTare = AL.ext1Ctrl.sign * *_orig;
 		*_orig = AL.ext1Ctrl.sign * *_orig - AL.tare.fValue[ch2Ext1];
 		break;
@@ -796,17 +821,28 @@ static int32_t antiMultipointCalibrateFunc( const float _orig,
 }
 
 /**
- * @brief Performs single point calibration based on the given ADC code and connector type.
- * 
- * This function takes an ADC code, a connector type, a pointer to a sensor data structure, and a pointer to the original value.
- * It calculates the calibrated original value based on the connector type and the calibration parameters in the sensor data structure.
- * 
- * @param[in] _code The ADC code to be calibrated.
- * @param[in] _connector The connector type.
- * @param[in] _senData A pointer to the sensor data structure containing calibration parameters.
- * @param[in,out] _orig A pointer to the variable storing the calibrated original value.
- * 
- * @return The calibrated original value.
+ * @brief 单点标定换算：按额定灵敏度直接将码值转换为工程量。
+ *
+ * @details
+ * 当 `LinPoint == 0` 时，系统认为当前通道没有配置多点线性化表，
+ * 上层就会退回到本函数，使用“单点灵敏度 + 额定量程”的固定公式进行换算。
+ *
+ * 该函数不是查表，而是按通道的额定参数直接计算：
+ * - 位置通道：`orig = sign * code * NominalSensitive`
+ * - 引伸计/负荷通道：先根据前端换算系数、灵敏度和额定值算出未去皮工程值，
+ *   再减去对应的 `AL.tare.fValue[]`
+ *
+ * 与多点标定相比，它的特点是：
+ * - 计算量小
+ * - 不依赖 `LinV[]`
+ * - 只能表达单一比例关系，无法修正非线性误差
+ *
+ * @param[in] _code       当前采样得到的原始码值
+ * @param[in] _connector  通道号，决定具体使用哪套公式
+ * @param[in] _senData    当前通道的传感器参数
+ * @param[out] _orig      输出工程值
+ *
+ * @return 返回换算后的工程值 `*_orig`
  */
 static float singlepointCalibrateFunc(  const int32_t _code,
                                     	const uint8_t _connector,
@@ -815,6 +851,7 @@ static float singlepointCalibrateFunc(  const int32_t _code,
 	switch (_connector)
 	{
 	case ch0Pose:
+		// 位置通道：直接按“码值 * 灵敏度 * 方向”得到工程位置。
 		*_orig = AL.posCtrl.sign * _code * AL.posCtrl.NominalSensitive;
 		break;
 	case ch1Bd:
@@ -822,16 +859,19 @@ static float singlepointCalibrateFunc(  const int32_t _code,
 		*_orig = 7777;
 		break;
 	case ch2Ext1:
+		// 引伸计1：先得到未去皮工程值，再减去 tare。
 		strain1.origTare = AL.ext1Ctrl.sign * (ADC_FACTOR_SENSOR_FRONTEND_ROUND * _code
 				/ AL.ext1Ctrl.NominalSensitive * AL.ext1Ctrl.NominalValue);
 		*_orig = strain1.origTare - AL.tare.fValue[ch2Ext1];
 		break;
 	case ch3Ext2:
+		// 引伸计2：公式同上，只是使用 ext2 的参数和 tare。
 		strain2.origTare = AL.ext2Ctrl.sign * (ADC_FACTOR_SENSOR_FRONTEND_ROUND * _code
 				/ AL.ext2Ctrl.NominalSensitive * AL.ext2Ctrl.NominalValue);
 		*_orig = strain2.origTare - AL.tare.fValue[ch3Ext2];
 		break;
 	case ch4Load:
+		// 负荷通道：多了 1000 倍量纲换算，用于得到最终负荷工程值。
 		force.origTare = AL.loadCtrl.sign * ((ADC_FACTOR_SENSOR_FRONTEND_ROUND * 1000.0f)  * _code
 				/ AL.loadCtrl.NominalSensitive * AL.loadCtrl.NominalValue);
 		*_orig = force.origTare - AL.tare.fValue[ch4Load];

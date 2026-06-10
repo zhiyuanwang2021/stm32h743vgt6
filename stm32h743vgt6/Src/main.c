@@ -371,15 +371,20 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 	}
   //2kHz for encoder collecting
   if(htim->Instance == TIM16){
+    // 2 kHz encoder sampling: latch three encoder accumulators each 0.5 ms.
     Encoder_Get(Encoder0, &encoder);
     Encoder_Get(Encoder1, &encoder);
     Encoder_Get(Encoder2, &encoder);
+    // Update raw code values used by position and big-deformation calculations.
     poseCodeCalculate_Int(&pose,encoder.count0);
     poseCodeCalculate_Int(&bigDeformationLower,encoder.count1);
     poseCodeCalculate_Int(&bigDeformationUpper,encoder.count2);
+    // Update the position-speed code filter in interrupt context.
     poseSpeedFilter_Int(&filter_Int,&pose,&speedPose,10);
+    // Software UTC time base follows the 0.5 ms encoder sampling period.
     AL.utcTime +=0.0005f; 
   }else if(htim->Instance == TIM17){
+    // FreeRTOS runtime statistics time base.
     FreeRTOSRunTimeTicks++;
   }
   /* USER CODE END Callback 0 */
